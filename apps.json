@@ -1,26 +1,14 @@
 [
   {
     "title": "App One",
-    "href": "app1.html",
+    "href": "budgeteer.html",
     "icon": "🎮",
     "desc": "A short, sweet description of what blooms here."
   },
   {
     "title": "App Two",
-    "href": "app2.html",
+    "href": "the-songbook.html",
     "icon": "📊",
-    "desc": "A short, sweet description of what blooms here."
-  },
-  {
-    "title": "App Three",
-    "href": "app3.html",
-    "icon": "🛠️",
-    "desc": "A short, sweet description of what blooms here."
-  },
-  {
-    "title": "App Four",
-    "href": "app4.html",
-    "icon": "✨",
     "desc": "A short, sweet description of what blooms here."
   }
 ]
