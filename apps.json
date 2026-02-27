@@ -1,14 +1,14 @@
 [
   {
-    "title": "App One",
+    "title": "Budgeteer",
     "href": "budgeteer.html",
-    "icon": "🎮",
-    "desc": "A short, sweet description of what blooms here."
+    "icon": "",
+    "desc": "Simple Budget App"
   },
   {
-    "title": "App Two",
+    "title": "Songbook",
     "href": "the-songbook.html",
-    "icon": "📊",
-    "desc": "A short, sweet description of what blooms here."
+    "icon": "",
+    "desc": "Digital Songbook"
   }
 ]
