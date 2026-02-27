@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>App Garden</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=Fredericka+the+Great&family=Nunito:wght@400;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --cream:   #f5f0e8;
+      --parchment: #ede5d0;
+      --moss:    #5a7a4a;
+      --sage:    #8aab78;
+      --fern:    #3d5c30;
+      --bloom:   #d4785a;
+      --blush:   #e8a98a;
+      --sky:     #b8d4c8;
+      --bark:    #7a5c3a;
+      --text:    #3a3028;
+      --muted:   #8a7a68;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--cream);
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
+      min-height: 100vh;
+      padding: 0 0 80px;
+      overflow-x: hidden;
+      cursor: auto;
+    }
+
+    /* === SKY + GROUND BACKGROUND === */
+    .bg-sky {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        #d6eae2 0%,
+        #e8f4ef 35%,
+        var(--cream) 65%,
+        #e8dfc8 100%
+      );
+      z-index: 0;
+    }
+
+    /* Soft noise texture overlay */
+    .bg-sky::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 200px;
+    }
+
+    /* === FLOATING LEAVES === */
+    .leaves-container {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .leaf {
+      position: absolute;
+      font-size: 20px;
+      opacity: 0;
+      animation: drift linear infinite;
+    }
+
+    @keyframes drift {
+      0%   { opacity: 0; transform: translateY(-40px) rotate(0deg) translateX(0px); }
+      10%  { opacity: 0.7; }
+      90%  { opacity: 0.5; }
+      100% { opacity: 0; transform: translateY(110vh) rotate(360deg) translateX(60px); }
+    }
+
+    /* === HEADER === */
+    header {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 70px 24px 20px;
+    }
+
+    .sun {
+      font-size: 48px;
+      display: block;
+      margin-bottom: 12px;
+      animation: sunrise 1.2s ease forwards;
+      opacity: 0;
+      transform: translateY(16px);
+    }
+
+    @keyframes sunrise {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .welcome-tag {
+      display: inline-block;
+      background: var(--sage);
+      color: #fff;
+      font-family: 'Nunito', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 4px 16px;
+      border-radius: 999px;
+      margin-bottom: 18px;
+      opacity: 0;
+      animation: fadeIn 0.6s 0.3s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    h1 {
+      font-family: 'Fredericka the Great', serif;
+      font-size: clamp(44px, 9vw, 88px);
+      color: var(--fern);
+      line-height: 1;
+      letter-spacing: -0.01em;
+      opacity: 0;
+      animation: fadeIn 0.8s 0.4s ease forwards;
+    }
+
+    h1 em {
+      font-family: 'Lora', serif;
+      font-style: italic;
+      color: var(--bloom);
+    }
+
+    .subtitle {
+      margin-top: 14px;
+      font-family: 'Lora', serif;
+      font-style: italic;
+      font-size: 16px;
+      color: var(--muted);
+      opacity: 0;
+      animation: fadeIn 0.8s 0.6s ease forwards;
+    }
+
+    /* === DIVIDER === */
+    .divider {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      margin: 32px 0 40px;
+      font-size: 22px;
+      opacity: 0;
+      animation: fadeIn 0.8s 0.7s ease forwards;
+      letter-spacing: 12px;
+    }
+
+    /* === GRID === */
+    .grid {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 24px;
+      width: 100%;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* === CARD === */
+    .app-card {
+      background: rgba(255, 252, 245, 0.85);
+      border: 2px solid rgba(138, 171, 120, 0.35);
+      border-radius: 20px;
+      padding: 32px 28px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      text-decoration: none;
+      color: var(--text);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(4px);
+      box-shadow:
+        0 2px 0 rgba(138,171,120,0.4),
+        0 8px 32px rgba(90, 122, 74, 0.08),
+        inset 0 1px 0 rgba(255,255,255,0.7);
+      transition: transform 0.3s cubic-bezier(.34,1.56,.64,1), box-shadow 0.3s ease, border-color 0.3s ease;
+      opacity: 0;
+      transform: translateY(20px);
+      animation: cardIn 0.5s ease forwards;
+    }
+
+    @keyframes cardIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .app-card:nth-child(1) { animation-delay: 0.55s; }
+    .app-card:nth-child(2) { animation-delay: 0.65s; }
+    .app-card:nth-child(3) { animation-delay: 0.75s; }
+    .app-card:nth-child(4) { animation-delay: 0.85s; }
+    .app-card:nth-child(5) { animation-delay: 0.95s; }
+    .app-card:nth-child(6) { animation-delay: 1.05s; }
+
+    /* Little corner botanical detail */
+    .app-card::before {
+      content: '🌿';
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      font-size: 18px;
+      opacity: 0.25;
+      transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .app-card:hover {
+      transform: translateY(-6px) rotate(-0.4deg);
+      border-color: rgba(90, 122, 74, 0.55);
+      box-shadow:
+        0 4px 0 rgba(90,122,74,0.4),
+        0 20px 48px rgba(90, 122, 74, 0.15),
+        inset 0 1px 0 rgba(255,255,255,0.9);
+    }
+
+    .app-card:hover::before {
+      opacity: 0.6;
+      transform: rotate(20deg) scale(1.2);
+    }
+
+    .card-icon {
+      font-size: 38px;
+      line-height: 1;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    }
+
+    .card-title {
+      font-family: 'Lora', serif;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--fern);
+      margin-bottom: 4px;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .card-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--moss);
+      border-top: 1px dashed rgba(138,171,120,0.4);
+      padding-top: 14px;
+      letter-spacing: 0.02em;
+      transition: gap 0.2s ease, color 0.2s;
+    }
+
+    .app-card:hover .card-btn {
+      gap: 10px;
+      color: var(--bloom);
+    }
+
+    .card-btn::after {
+      content: '→';
+      transition: transform 0.2s ease;
+    }
+
+    .app-card:hover .card-btn::after {
+      transform: translateX(3px);
+    }
+
+    /* === GROUND STRIP === */
+    .ground {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 1;
+      height: 56px;
+      background: linear-gradient(180deg, transparent 0%, rgba(90,122,74,0.12) 100%);
+      pointer-events: none;
+    }
+
+    .ground-plants {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 1;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 20px;
+      pointer-events: none;
+      font-size: 28px;
+      line-height: 1;
+    }
+
+    .loading {
+      grid-column: 1 / -1;
+      text-align: center;
+      font-family: 'Lora', serif;
+      font-style: italic;
+      color: var(--muted);
+      padding: 40px;
+      font-size: 16px;
+    }
+
+    .error {
+      grid-column: 1 / -1;
+      text-align: center;
+      font-family: 'Lora', serif;
+      font-style: italic;
+      color: var(--bloom);
+      padding: 40px;
+      font-size: 15px;
+    }
+    footer {
+      position: relative;
+      z-index: 2;
+      margin-top: 60px;
+      text-align: center;
+      font-family: 'Lora', serif;
+      font-style: italic;
+      font-size: 13px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-sky"></div>
+
+  <!-- Floating leaves -->
+  <div class="leaves-container" id="leaves"></div>
+
+  <header>
+    <span class="sun">☀️</span>
+    <div class="welcome-tag">✦ Welcome to App Garden ✦</div>
+    <h1>App <em>Garden</em></h1>
+    <p class="subtitle">a cosy corner of the internet — pick a flower to begin</p>
+  </header>
+
+  <div class="divider">🌸 🌿 🌼</div>
+
+  <div class="grid" id="grid">
+    <!-- Cards are loaded dynamically from apps.json -->
+    <div class="loading">🌱 tending the garden…</div>
+  </div>
+
+  <footer>tended with love &nbsp;🌱&nbsp; hosted on github pages</footer>
+
+  <!-- Ground plants -->
+  <div class="ground"></div>
+  <div class="ground-plants">
+    <span>🌿</span><span>🌾</span><span>🍀</span><span>🌿</span><span>🌾</span>
+    <span>🍃</span><span>🌿</span><span>🌾</span><span>🍀</span><span>🌿</span>
+  </div>
+
+  <script>
+    // Floating leaves
+    const leafEmojis = ['🍃', '🍂', '🌿', '🍀', '🌸', '🌼'];
+    const leavesContainer = document.getElementById('leaves');
+
+    function spawnLeaf() {
+      const el = document.createElement('span');
+      el.classList.add('leaf');
+      el.textContent = leafEmojis[Math.floor(Math.random() * leafEmojis.length)];
+      el.style.left = Math.random() * 100 + 'vw';
+      el.style.fontSize = (14 + Math.random() * 14) + 'px';
+      const dur = 8 + Math.random() * 12;
+      el.style.animationDuration = dur + 's';
+      el.style.animationDelay = (Math.random() * 4) + 's';
+      leavesContainer.appendChild(el);
+      setTimeout(() => el.remove(), (dur + 4) * 1000);
+    }
+
+    for (let i = 0; i < 10; i++) spawnLeaf();
+    setInterval(spawnLeaf, 1800);
+
+    // Load apps from apps.json
+    const grid = document.getElementById('grid');
+
+    fetch('apps.json')
+      .then(r => {
+        if (!r.ok) throw new Error('Could not load apps.json');
+        return r.json();
+      })
+      .then(apps => {
+        grid.innerHTML = '';
+        apps.forEach((app, i) => {
+          const delay = (0.55 + i * 0.1).toFixed(2);
+          const card = document.createElement('a');
+          card.className = 'app-card';
+          card.href = app.href;
+          card.style.animationDelay = delay + 's';
+          card.innerHTML = `
+            <div class="card-icon">${app.icon || '🌸'}</div>
+            <div>
+              <div class="card-title">${app.title}</div>
+              <div class="card-desc">${app.desc || ''}</div>
+            </div>
+            <div class="card-btn">Visit garden plot</div>
+          `;
+          grid.appendChild(card);
+        });
+      })
+      .catch(err => {
+        grid.innerHTML = `<div class="error">🥀 Couldn't find apps.json — make sure it's in the same folder as index.html.<br><small>${err.message}</small></div>`;
+      });
+  </script>
+
+</body>
+</html>

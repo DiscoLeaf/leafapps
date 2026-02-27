@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Songbook</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0e0e12;--sf:#16161c;--sf2:#1e1e27;--br:#2a2a38;--tx:#f0f0f8;--mu:#7070a0;--a1:#ff3c6e;--a2:#00e5b0;--a3:#7b61ff;--a4:#ffb830;--a5:#00c8ff;}
+.light{--bg:#f5f4f0;--sf:#fff;--sf2:#eeecf8;--br:#dddae8;--tx:#18181f;--mu:#888;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;transition:background .3s,color .3s;}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--sf);border-bottom:2px solid var(--br);position:sticky;top:0;z-index:100;}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:1.9rem;letter-spacing:3px;background:linear-gradient(90deg,var(--a1),var(--a3),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hdr-r{display:flex;gap:10px;align-items:center;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;border:none;font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .15s;}
+.btn-p{background:var(--a1);color:#fff;}.btn-p:hover{filter:brightness(1.15);transform:translateY(-1px);}
+.btn-g{background:transparent;color:var(--mu);border:1.5px solid var(--br);}.btn-g:hover{color:var(--tx);border-color:var(--a3);}
+.tbtn{background:var(--sf2);border:1.5px solid var(--br);border-radius:8px;padding:7px 10px;cursor:pointer;font-size:1rem;color:var(--tx);}.tbtn:hover{border-color:var(--a4);}
+.app{display:flex;height:calc(100vh - 61px);overflow:hidden;}
+.sidebar{width:236px;min-width:236px;background:var(--sf);border-right:2px solid var(--br);overflow-y:auto;display:flex;flex-direction:column;padding:16px 0 24px;}
+.sidebar::-webkit-scrollbar{width:4px;}.sidebar::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px;}
+.sb-sec{padding:8px 18px 4px;font-size:.65rem;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;color:var(--mu);margin-top:8px;}
+.sbi{display:flex;align-items:center;gap:10px;padding:9px 18px;cursor:pointer;font-size:.875rem;color:var(--mu);transition:all .12s;position:relative;user-select:none;}
+.sbi:hover{color:var(--tx);background:var(--sf2);}
+.sbi.active{color:var(--a3);background:rgba(123,97,255,.1);}
+.sbi.active::before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:3px;background:var(--a3);border-radius:0 2px 2px 0;}
+.sb-badge{margin-left:auto;background:var(--sf2);border-radius:10px;padding:2px 7px;font-size:.7rem;color:var(--mu);font-family:'DM Mono',monospace;}
+.cdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.bk-hdr{display:flex;align-items:center;gap:8px;padding:9px 18px;font-size:.875rem;color:var(--mu);transition:all .12s;cursor:pointer;user-select:none;}
+.bk-hdr:hover{color:var(--tx);background:var(--sf2);}
+.bk-arrow{font-size:.7rem;transition:transform .2s;flex-shrink:0;}
+.bk-hdr.open .bk-arrow{transform:rotate(90deg);}
+.bk-cats{display:none;padding-left:8px;}.bk-cats.open{display:block;}
+.main{flex:1;overflow-y:auto;padding:24px 28px;}
+.main::-webkit-scrollbar{width:6px;}.main::-webkit-scrollbar-thumb{background:var(--br);border-radius:3px;}
+.srch-w{position:relative;margin-bottom:22px;}
+.srch-in{width:100%;padding:13px 18px 13px 46px;background:var(--sf);border:2px solid var(--br);border-radius:12px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.95rem;outline:none;transition:border-color .2s;}
+.srch-in:focus{border-color:var(--a3);}.srch-in::placeholder{color:var(--mu);}
+.srch-ico{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:1rem;color:var(--mu);pointer-events:none;}
+.sugg{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--sf);border:2px solid var(--a3);border-radius:12px;overflow:hidden;z-index:50;box-shadow:0 12px 40px rgba(0,0,0,.4);display:none;}
+.sugg.open{display:block;}
+.sug-i{display:flex;align-items:center;gap:12px;padding:11px 16px;cursor:pointer;border-bottom:1px solid var(--br);transition:background .1s;}
+.sug-i:last-child{border-bottom:none;}.sug-i:hover{background:var(--sf2);}
+.sug-t{font-weight:700;font-size:.875rem;}.sug-m{font-size:.75rem;color:var(--mu);}
+.tag-fs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;}
+.chip{padding:5px 12px;border-radius:20px;border:1.5px solid var(--br);background:var(--sf);color:var(--mu);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .15s;}
+.chip:hover{border-color:var(--a3);color:var(--tx);}.chip.active{background:var(--a3);border-color:var(--a3);color:#fff;}
+.books-shelf{margin-bottom:28px;}
+.sec-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:2px;margin-bottom:14px;display:flex;align-items:baseline;gap:12px;}
+.sec-sub{color:var(--mu);font-size:.9rem;font-family:'DM Sans';font-weight:400;letter-spacing:0;}
+.bks-row{display:flex;gap:14px;overflow-x:auto;padding-bottom:6px;scrollbar-width:none;}
+.bks-row::-webkit-scrollbar{display:none;}
+.bk-card{min-width:148px;max-width:148px;border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s;flex-shrink:0;background:var(--sf);border:2px solid var(--br);}
+.bk-card:hover{transform:translateY(-4px);box-shadow:0 8px 28px rgba(0,0,0,.3);}
+.bk-card.sel{border-color:var(--a3);}
+.bk-spine{height:6px;}
+.bk-body{padding:14px 14px 12px;}
+.bk-name{font-weight:800;font-size:.82rem;line-height:1.3;margin-bottom:4px;}
+.bk-cnt{font-size:.72rem;color:var(--mu);}
+.bk-yr{font-size:.68rem;font-family:'DM Mono',monospace;color:var(--mu);margin-top:6px;}
+.rec-strip{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;margin-bottom:28px;scrollbar-width:none;}
+.rec-strip::-webkit-scrollbar{display:none;}
+.rc{min-width:148px;padding:14px;border-radius:10px;cursor:pointer;flex-shrink:0;transition:transform .15s;}
+.rc:hover{transform:translateY(-3px);}
+.rc-t{font-weight:700;font-size:.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rc-a{font-size:.72rem;opacity:.7;margin-top:3px;}
+.rc-c{font-size:.62rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-top:8px;opacity:.75;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;}
+.sc{background:var(--sf);border:2px solid var(--br);border-radius:14px;overflow:hidden;cursor:pointer;transition:all .18s;}
+.sc:hover{border-color:var(--a3);transform:translateY(-2px);box-shadow:0 8px 28px rgba(123,97,255,.12);}
+.sc-strip{height:4px;}
+.sc-hd{padding:16px 16px 10px;display:flex;justify-content:space-between;align-items:flex-start;}
+.sc-ti{font-weight:700;font-size:.95rem;line-height:1.3;}
+.sc-ar{font-size:.78rem;color:var(--mu);margin-top:2px;}
+.fav{background:none;border:none;cursor:pointer;font-size:1.15rem;padding:1px;transition:transform .15s;flex-shrink:0;}
+.fav:hover{transform:scale(1.3);}
+.sc-pre{padding:0 16px 10px;font-size:.78rem;color:var(--mu);line-height:1.65;font-family:'DM Mono',monospace;white-space:pre-wrap;max-height:58px;overflow:hidden;position:relative;}
+.sc-pre::after{content:'';position:absolute;bottom:0;left:0;right:0;height:22px;background:linear-gradient(transparent,var(--sf));}
+.sc-ft{padding:10px 16px 14px;display:flex;align-items:center;gap:7px;flex-wrap:wrap;border-top:1px solid var(--br);}
+.tag{background:rgba(123,97,255,.12);color:#b8a8ff;padding:2px 9px;border-radius:20px;font-size:.7rem;font-weight:700;}
+.light .tag{background:rgba(123,97,255,.1);color:#6040cc;}
+.cpbtn{margin-left:auto;background:var(--a2);color:#001a12;border:none;border-radius:7px;padding:5px 11px;font-size:.75rem;font-weight:800;cursor:pointer;transition:all .12s;font-family:'DM Sans',sans-serif;}
+.cpbtn:hover{filter:brightness(1.1);transform:scale(1.03);}.cpbtn.copied{background:var(--a4);color:#201000;}
+.empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--mu);}
+.empty-ico{font-size:2.5rem;margin-bottom:10px;}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;}
+.ov.open{display:flex;}
+.modal{background:var(--sf);border:2px solid var(--br);border-radius:18px;width:100%;max-width:660px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;animation:su .22s ease;}
+@keyframes su{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+.m-hdr{padding:20px 24px 16px;border-bottom:2px solid var(--br);display:flex;justify-content:space-between;align-items:flex-start;flex-shrink:0;}
+.m-ti{font-family:'Bebas Neue';font-size:1.8rem;letter-spacing:2px;}
+.m-ar{color:var(--mu);font-size:.85rem;margin-top:2px;}
+.m-me{font-size:.75rem;color:var(--mu);font-style:italic;margin-top:3px;}
+.m-cl{background:var(--sf2);border:none;border-radius:8px;padding:5px 10px;cursor:pointer;color:var(--mu);font-size:1.1rem;}.m-cl:hover{color:var(--a1);}
+.m-tags{padding:10px 24px;border-bottom:1px solid var(--br);display:flex;gap:7px;flex-wrap:wrap;flex-shrink:0;}
+.m-body{padding:20px 24px;overflow-y:auto;flex:1;font-family:'DM Mono',monospace;font-size:.87rem;line-height:2;white-space:pre-wrap;color:var(--tx);}
+.m-body::-webkit-scrollbar{width:5px;}.m-body::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px;}
+.m-ft{padding:14px 24px;border-top:2px solid var(--br);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;}
+.cpall{background:var(--a2);color:#001a12;border:none;border-radius:10px;padding:10px 22px;font-size:.875rem;font-weight:800;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;}
+.cpall:hover{filter:brightness(1.1);}.cpall.copied{background:var(--a4);color:#201000;}
+.upl-m{background:var(--sf);border:2px solid var(--br);border-radius:18px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;padding:28px;animation:su .22s ease;}
+.upl-m::-webkit-scrollbar{width:5px;}.upl-m::-webkit-scrollbar-thumb{background:var(--br);border-radius:2px;}
+.upl-m h2,.bku-m h2{font-family:'Bebas Neue';font-size:1.7rem;letter-spacing:2px;margin-bottom:22px;}
+.upl-m h2{background:linear-gradient(90deg,var(--a1),var(--a3));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.bku-m h2{background:linear-gradient(90deg,var(--a3),var(--a2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.fg{margin-bottom:14px;}
+.fl{display:block;font-size:.72rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);margin-bottom:5px;}
+.fi,.fta,.fsl{width:100%;padding:10px 13px;background:var(--sf2);border:2px solid var(--br);border-radius:10px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:.875rem;outline:none;transition:border-color .2s;}
+.fi:focus,.fta:focus,.fsl:focus{border-color:var(--a3);}
+.fta{resize:vertical;min-height:150px;font-family:'DM Mono',monospace;font-size:.8rem;line-height:1.75;}
+.fsl option{background:var(--sf);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.tw{display:flex;gap:6px;flex-wrap:wrap;padding:7px;background:var(--sf2);border:2px solid var(--br);border-radius:10px;min-height:42px;align-items:center;}
+.tw:focus-within{border-color:var(--a3);}
+.tpill{background:rgba(123,97,255,.15);color:#b8a8ff;padding:3px 9px;border-radius:20px;font-size:.75rem;font-weight:700;display:flex;align-items:center;gap:4px;}
+.tpill button{background:none;border:none;cursor:pointer;color:inherit;font-size:.85rem;line-height:1;}
+.tin{background:none;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:.83rem;color:var(--tx);min-width:70px;flex:1;}
+.fa{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;}
+.bku-m{background:var(--sf);border:2px solid var(--br);border-radius:18px;width:100%;max-width:460px;padding:28px;animation:su .22s ease;}
+/* Storage info badge */
+.stor-badge{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--sf2);border:1px solid var(--br);border-radius:8px;font-size:.72rem;color:var(--mu);font-family:'DM Mono',monospace;}
+.stor-bar{width:80px;height:5px;background:var(--br);border-radius:3px;overflow:hidden;}
+.stor-fill{height:100%;background:var(--a2);border-radius:3px;transition:width .4s;}
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:var(--a2);color:#001a12;padding:11px 22px;border-radius:10px;font-weight:800;font-size:.875rem;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+.toast.warn{background:var(--a4);color:#201000;}
+@media(max-width:680px){.sidebar{display:none;}.main{padding:18px 16px;}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">📖 The Songbook</div>
+  <div class="hdr-r">
+    <div class="stor-badge" id="storBadge" title="localStorage usage">
+      <div class="stor-bar"><div class="stor-fill" id="storFill" style="width:0%"></div></div>
+      <span id="storTxt">0 KB</span>
+    </div>
+    <button class="tbtn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+    <button class="btn btn-g" onclick="openUpload()">＋ Song</button>
+  </div>
+</header>
+<div class="app">
+  <div class="sidebar">
+    <div class="sb-sec">Library</div>
+    <div class="sbi active" id="sbAll" onclick="filterCat('all',this)">
+      <span>🎵</span> All Songs <span class="sb-badge" id="bAll">0</span>
+    </div>
+    <div class="sbi" id="sbFav" onclick="filterCat('favorites',this)">
+      <span>⭐</span> Favorites <span class="sb-badge" id="bFav">0</span>
+    </div>
+    <div class="sb-sec">Books</div>
+    <div id="booksList"></div>
+  </div>
+  <div class="main">
+    <div class="srch-w">
+      <span class="srch-ico">🔍</span>
+      <input class="srch-in" id="srchIn" type="text" placeholder="Search songs, artists, lyrics…"
+        autocomplete="off" oninput="handleSearch()" onfocus="showSugg()" onblur="hideSugg()">
+      <div class="sugg" id="sugg"></div>
+    </div>
+    <div class="tag-fs" id="tagFs"></div>
+    <div class="books-shelf">
+      <div class="sec-title">Books
+        <span class="sec-sub">or <span style="color:var(--a1);cursor:pointer;font-weight:700" onclick="openBookUpload()">create a new one</span></span>
+      </div>
+      <div class="bks-row" id="bksRow"></div>
+    </div>
+    <div id="recSec">
+      <div class="sec-title">Recently Viewed</div>
+      <div class="rec-strip" id="recStrip"></div>
+    </div>
+    <div class="sec-title" id="gridTitle">All Songs <span class="sec-sub" id="gridCnt"></span></div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<!-- Song modal -->
+<div class="ov" id="songModal">
+  <div class="modal">
+    <div class="m-hdr">
+      <div>
+        <div class="m-ti" id="mTi"></div>
+        <div class="m-ar" id="mAr"></div>
+        <div class="m-me" id="mMe"></div>
+      </div>
+      <button class="m-cl" onclick="closeModal()">✕</button>
+    </div>
+    <div class="m-tags" id="mTags"></div>
+    <div class="m-body" id="mBody"></div>
+    <div class="m-ft">
+      <button class="btn btn-g" onclick="toggleFavModal()"><span id="mFavIco">☆</span> Favorite</button>
+      <button class="cpall" id="cpAllBtn" onclick="copyAll()">📋 Copy Lyrics</button>
+    </div>
+  </div>
+</div>
+
+<!-- Upload song modal -->
+<div class="ov" id="uplModal">
+  <div class="upl-m">
+    <h2>Add New Song</h2>
+    <div class="fg"><label class="fl">Song Title *</label><input class="fi" id="fTi" type="text" placeholder="Enter song title"></div>
+    <div class="fg"><label class="fl">Artist / Composer</label><input class="fi" id="fAr" type="text" placeholder="Artist name"></div>
+    <div class="form-row">
+      <div class="fg"><label class="fl">Book *</label><select class="fsl" id="fBk"></select></div>
+      <div class="fg"><label class="fl">Category</label><input class="fi" id="fCat" type="text" placeholder="e.g. Worship"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Tags (Enter or comma)</label>
+      <div class="tw" id="tagWrap"><input class="tin" id="tagIn" placeholder="Add tag…" onkeydown="handleTagIn(event)"></div>
+    </div>
+    <div class="fg"><label class="fl">Lyrics *</label><textarea class="fta" id="fLy" placeholder="Paste or type lyrics…"></textarea></div>
+    <div class="fa">
+      <button class="btn btn-g" onclick="closeUpload()">Cancel</button>
+      <button class="btn btn-p" onclick="saveSong()">Save Song</button>
+    </div>
+  </div>
+</div>
+
+<!-- Create book modal -->
+<div class="ov" id="bkuModal">
+  <div class="bku-m">
+    <h2>📚 Create a Book</h2>
+    <div class="fg"><label class="fl">Book Name *</label><input class="fi" id="bkN" type="text" placeholder="e.g. Church Hymnal 2024"></div>
+    <div class="fg"><label class="fl">Year</label><input class="fi" id="bkY" type="text" placeholder="e.g. 2024"></div>
+    <div class="fg"><label class="fl">Description</label><input class="fi" id="bkD" type="text" placeholder="Optional description"></div>
+    <div class="fa">
+      <button class="btn btn-g" onclick="closeBookUpload()">Cancel</button>
+      <button class="btn btn-p" onclick="saveBook()">Create Book</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+const SEED_PAYLOAD = {"cats":["Dryckesvisor","Högtidligt","Kalmar & Tradition","Lindgren","Omskrivna Texter","Punschen","Snapsvisor","Ut i Calmare län","Utrikes","Våra vänner"],"bids":["kalmar2023","kalmar_extra"],"songs":[["Stridssång","",1,0,[],"Å, hej vad det susar i löven\nå, hej vad det klingar i kronor och ljus\nå, hej vad det spelas på fiolen\ni detta lustiga hus! Hej! Hej! Hej!\n(Parlando fff) Hej, röto de gamble Göter\nfordomtima, drucko ur horn och fröjdade sig\ni andanom. Måtte de Calmarienses alltid så ryta:\nHej! Hej! Hej!\nSjunges alltid innan festligheterna ska börja på nationen\nDet var i vår ungdoms fagraste vår\nAlla:\nDet var i vår ungdoms fagraste vår,\nvi drack varandra till och vi sade ”Gutår”\nOch alla så dricka vi nu NN till.\nSolo:\nOch NN säger inte nej därtill\nAlla:\nFör det var i vår ungdoms fagraste vår,\nvi drack varandra till, och vi sade ”Gutår”"],["Du gamla, du fria","Richard Dybeck",1,0,[],"Du gamla, Du fria, Du fjällhöga nord\nDu tysta, Du glädjerika sköna!\nJag hälsar Dig, vänaste land uppå jord,\n/: Din sol, Din himmel, Dina ängder gröna. :/\nDu tronar på minnen från fornstora dar,\ndå ärat Ditt namn flög över jorden.\nJag vet att Du är och Du blir vad du var.\n/: Ja, jag vill leva jag vill dö i Norden. :/\nJag städs vill dig tjäna, mitt älskade land,\nDig trohet till döden vill jag svära.\nDin rätt skall jag värna med håg och med hand,\n/: Din fana, högt den bragderika bära. :/\nMed Gud skall jag kämpa för hem och för härd,\nför Sverige, den kära fosterjorden.\nJag byter Dig ej mot allt i en värld\n/: Nej, jag vill leva jag vill dö i Norden! :/\nTraditionellt sjunges endast vers 1 & 2. Vers 3 & 4 är ett\nmodernt tillägg från tidigt 1900-tal men som sällan\nsjunges","Text: Richard Dybeck | Melodi: Så rider jag mig över tolvmilan skog"],["Studentsången","Herman Sätherberg",1,0,[],"Sjungom studentens lyckliga dag,\nlåtom oss fröjdas i ungdomens vår!\nÄn klappar hjärtat med friska slag,\noch den ljusnande framtid är vår.\nInga stormar än i våra sinnen bo,\nhoppet är vår vän, och vi dess löften tro,\nnär vi knyta förbund i den lund,\n/: där de härliga lagrarna gro! :/\nHurra!\nSvea vår moder hugstor och skön,\nmanar till bragd som i fornstora da’r,\nvinkar med segerns och ärans lön,\nmed den skörd utan strid man ej tar.\nAldrig slockne då känslans rena brand,\naldrig brista må vår trohets helga band,\nså i gyllene frid som i strid.\n/: Liv och blod för vårt fädernesland! :/\nHurra!","Text: Herman Sätherberg | Melodi: Prins Gustaf"],["Sveriges flagga","Karl Gustav Ossiannilsson",1,0,[],"Flamma stolt mot dunkla skyar,\nlikt en glimt av sommarens sol\növer Sveriges skogar, berg och byar,\növer vatten av viol.\nDu som sjunger, när du bredes,\nsom vår gamla lyckas tolk:\nsolen lyser! Solen lyser!\nIngen vredes åska slog vårt tappra folk.\nFlamma högt, vårt kärlekstecken,\nvärm oss, när det blåser kallt!\nStråla ur de blåa vecken,\nkärlek mera stark än allt!\nSveriges flagga, Sveriges ära,\nfornklenod och framtidstolk.\nGud är med oss, Gud är med oss.\nHan skall bära stark vårt fria svenska folk.","Text: Karl Gustav Ossiannilsson | Musik: Hugo Alfvén"],["Sommarpsalm","Carl David af Wirsén",1,0,[],"En vänlig grönskas rika dräkt\nhar smyckat dal och ängar.\nNu smeker vindens ljumma fläkt\nde fagra örtesängar.\nOch solens ljus och lundens sus\noch vågens sorl bland viden\nförkunna sommartiden.\nSin lycka och sin sommarro\nde yra fåglar prisa;\nur skogens snår, ur stilla bo\nframklingar deras visa.\nEn hymn går opp med fröjd och hopp\nfrån deras glada kväden\nfrån blommorna och träden.\nMen du, o Gud, som gör vår jord\nså skön i sommarns stunder.\nGiv att jag aktar främst ditt ord\noch dina nådestunder.\nAllt kött är hö, och blomstren dö\noch tiden allt fördriver","Text: Carl David af Wirsén"],["Längtan till landet","Herman Sätherberg",1,0,[],"Vintern rasat ut bland våra fjällar,\ndrivans blommor smälta ned och dö.\nHimlen ler i vårens ljusa kvällar,\nsolen kysser liv i skog och sjö.\nSnart är sommarn här i purpurvågor,\nguldbelagda, azurskiftande\nligga ängarne i dagens lågor,\noch i lunden dansa källorne.\nJa, jag kommer! Hälsen, glada vindar,\nut till landet, ut till fåglarne,\natt jag älskar dem, till björk och lindar,\nsjö och berg, jag vill dem återse,\nse dem än som i min barndoms stunder\nfölja bäckens dans till klarnad sjö,\ntrastens sång i furuskogens lunder,\nvattenfågelns lek kring fjärd och ö.","Text: Herman Sätherberg | Musik: Otto Lindblad"],["Nu grönskar det","Evelyn Lindström",1,0,[],"Nu grönskar det i dalens famn,\nnu doftar äng och lid.\nKom med, kom med på vandringsfärd\ni vårens glada tid!\nVar dag är som en gyllne skål,\ntill brädden fylld med vin.\nSå drick, min vän, drick sol och doft,\nty dagen, den är din.\nLångt bort från stadens gråa hus\nvi glatt vår kosa styr\noch följer vägens vita band\nmot ljusa äventyr.\nMed öppna ögon låt oss se på livets rikedom,\nsom gror och sjuder överallt\ndär våren går i blom.","Text: Evelyn Lindström | Melodi: Johann Sebastian Bach"],["De brevitate vitae","C. W. Kindleben",1,0,[],"Vers 1–7 & 10\n/: Gaudeamus igitur,\nJuvenes dum sumus; :/\nPost jucundam juventutem,\nPost molestam senectutem\n/: Nos habebit humus! :/\n/: Vita nostra brevis est,\nBrevi finietur, :/\nVenit mors velociter,\nRapit nos atrociter,\n/: Nemini parcetur. :/\n/: Ubi sunt qui ante nos\nIn mundo fuere? :/\nVadite ad superos,\nTransite ad inferos,\n/: Hos si vis videre. :/\n/: Vivat academia,\nVivant professores, :/\nVivat membrum quodlibet,\nVivant membra quaelibet,\n/: Semper sint in flore! :/\n18\n/: Vivant omnes virgines\nFaciles, formosae, :/\nVivant et mulieres,\nTenerae, amabiles,\n/: Bonae, laboriosae! :/\n/: Vivat et respublica\nEt qui illam regit, :/\nVivat nostra civitas,\nMaecenatum caritas,\n/: Quae nos hic protegit! :/\n/: Pereat tristitia,\nPereant osores, :/\nPereat diabolus,\nQuivis antiburschius,\n/: Atque irrisores! :/\n/: Alma Mater floreat,\nQuae nos educavit; :/\nCaros et commilitones,\nDissitas in regiones\n/: Sparsos, congregavit. :/","Text: C. W. Kindleben"],["O gamla klang- och jubeltid!","August Lindh",1,0,[],"O, gamla klang- och jubeltid,\nditt minne skall förbliva,\noch än åt livets bistra strid\nett rosigt skimmer giva!\nSnart tystnar allt vårt yra skämt,\nvår sång blir stum, vår glam förstämt;\nO, jerum, jerum, jerum,\nO, quae mutatio rerum!\nVar äro de som kunde allt,\nblott ej sin ära svika,\nsom voro män av äkta halt\noch världens herrar lika?\nDe drogo bort från vin och sång\ntill vardagslivets tråk och tvång;\nO, jerum…\nFilosofer: Den ene vetenskap och vett\nin i scholares mänger,\nJurister: den andre i sitt anlets svett\npå paragrafer vränger,\nTeologer: en plåstrar själen som är skral,\nMedicinare: en lappar hop dess trasiga fodral;\n20\nO, jerum…\nMen hjärtat i en sann student\nkan ingen tid förfrysa.\nDen glädjeeld som där han tänt,\nhans hela liv skall lysa.\nDet gamla skalet brustit har,\nmen kärnan finnes frisk dock kvar,\noch vad han än må mista,\nden skall dock aldrig brista!\nSå sluten, bröder, fast vår krets\ntill glädjens värn och ära!\nTrots allt vi tryggt och väl tillfreds\nvår vänskap trohet svära.\nLyft bägarn högt och klinga, vän!\nDe gamla gudar leva än\nbland skålar och pokaler,\nbland skålar och pokaler!\n21\nCalmarevisan\n/: Uti Calmare stad,\ndär finnes ingen kvast :/\nförrän lördagen.\nHej dick och hej dack!\nJag slog i och du drack!\nHej dickom dickom dack!\nHej fallerallala!\nUti Calmare stad, där finnes ingen kvast\nförrän lördagen.\n/: När som kvasten kommer in\nkommer viskorna med. :/\nVar du säker på det!\nHej dick och hej dack…\n/: När som bonden kommer hem\nkommer bondegumman ut :/\nOch är ful i sin trut.\nHej dick och hej dack...\n/: Var är pengarna du fått?\nJo, dom har jag supit upp :/\nUppå Calmare slott.\nHej dick och hej dack…\n/: Jag ska klaga dig an\nför vår kronbefallningsman :/\nOch du skall få skam.\nHej dick och hej dack…\n/: Kronbefallningsmannen vår\nsatt på krogen igår :/\nOch var full som ett får.\nHej dick och hej dack…\nPå kalmaritiska\n/: Vad ska bonden ha till mat?\nSura sillar och potat. :/\nDet blir sillsallat.\nHej dick och hej dack…","Text: August Lindh | Melodi: O alte Burschenherrlichkeit"],["Vid Färjestaden","Erik Axel Karlfeldt",7,0,[],"Är näktergalen kommen till lund?\nFaderallanla faderallanla.\nO ja, min kund faderallanla,\nnu börjar Ölands vår.\nVälkommen upp från Kalmarsund,\nfaderallanla faderallanla.\nVälkommen upp från Kalmarsund,\ndär farlig sunnan går.\nO ja, på väg till Byxelkrok,\nfaderallanla faderallanla,\nMig stormen vrok, faderallanla,\ni denna lugna hamn.\nOch jag är själv en ölandstok,\nfaderallanla faderallanla.\nOch jag är själv en ölandstok\noch Nyter är mitt namn.\nGå ut och stick en vildsvinsgalt,\nfaderallanla faderallanla,\noch red mig palt, faderallanla,\noch fly mig kannan mor!\nI många år jag slukat salt,\n26\nfaderallanla faderallanla.\nI många år jag slukat salt,\noch det gör törsten stor.\nMin faders gård står tom och grå,\nfaderallanla faderallanla,\nmed mossa på, faderallanla,\nbland sura äppelträd.\nOch långsamt kryper starr och strå,\nfaderallanla faderallanla,\noch långsamt kryper starr och strå\ndit ner till tegens säd.\nFarväl du vilda väg jag red,\nfaderallanla faderallanla\nPå solig hed! Faderallanla,\njag har en annan häst.\nJag följer sjömäns skick och sed,\nfaderallanla faderallanla.\nJag följer sjömäns skick och sed\noch landar blott som gäst.\nI Arontorp där blommar en ros,\nfaderallanla faderallanla.\nJag far min kos, faderallanla,\nfrån rosorna på strand.\nJag är en öländsk lättmatros,\nfaderallanla faderallanla.\nJag är en öländsk lättmatros\noch havet är mitt land.","Text: Erik Axel Karlfeldt | Musik: Robert Norrby"],["Ölandsbron","Henrik Fröjmark",7,0,[],"Det talas om en liten mur i Kina,\nnån tetraformad fornegyptisk grav.\nOch visst är pyramiderna rätt fina,\nmen underverk, då har man låga krav.\nJa, ni får gärna kalla oss för bönder.\nVi kalmariter, vi tar sånt med ro.\nNär era gamla prylar vittrar sönder\nså har vi kvar vår vackra Ölandsbro.\n6000 meter lång,\ngjord av förstärkt betong.\nFrån Färjestad till Svinö i ett nafs.\nOch varje pelare\ngör länet helare\noch sparkar stjärt med ert antika krafs.\nRaj raj raj raj raj raj...","Text: Henrik Fröjmark | Melodi: Those were the days"],["Ölandssången","Sven-Erik Sjöholm",7,0,[],"Här är fagra sommarlandet\nVindarnas och solens ö\nHär är karga vinterlandet\nStormarnas och fåkens ö\nNäktergalens gröna lunder\nAlvargrimmans öde hed\nÖland tusen blommors under\nHembygd tag vår sång och ed\nVita kyrkor tysta gårdar\nLigga spridda på din grund\nStilla talar minnets vårdar\nLikt ett sus i helig lund\nTusenårig saga spinner\nÄn på döde mäns bedrift\nOch i lunden än man finner\nGlömda fäders skumma grift\nMjukt du stiger upp ur havet\nVindomsusad sångens ö\nÄr ditt öde än begravet\nMogna skall det ur sitt frö\nStarka armar skola viga\nAll sin kraft åt dig vår mor\nOch din framtid ljust skall stiga\nUr vår kärlek öm och stor","Text: Sven-Erik Sjöholm | Musik: Birger Anrep – Nordin"],["Hultsfredsvisan","Erik Baehrendtz",7,0,[],"Ja haver faret i vära vide,\nfått mörke sakne, fått mörke lide.\nMen när mitt liv varet mest som grått,\nhar mine tanker till Hultsfre' gått.\nDå drömmer ja mej till Huling-sjöen,\ndär blommer sippen, där blomstrer möen.\nJa minns den kvellen, när jag geck öpp\nmä Sara te Jisseskalle töpp.\nMen ve o fasa, där öppå backen\nsto mi Johanna, ho knöck på nacken.\nSå sörjligt slutet på detta ble'\natt ja feck fara långt frå Hultsfre'.\nKroppkakans lov\nSätt nu fram i Gillesalen\nav den grå och vita färg,\nkakan av potatis malen\nuppå faten hela berg!\nBlott kroppkakor vill jag äta\n30\nnöjd och glad till sista stund,\n/: När mot mig de varma feta\nLe från fatens vita rund. :/\nUnder Ölands sol måhända\nfärgas kakan mera svart;\nvart vi oss i världen vända\nfinns ej mat av sådan art.\nNordbon sig med långmjölk rusar,\ngröten trivs en skåning i.\n/: Men kroppkakan mig dock tjusar,\nfläsk och skinka bo däri. :/\nI min ungdoms fröjd och gamman\nsom i ålderns höst så vit,\ndenna kakan band mig samman\nmed så mången kalmarit.\nDärför när vi Öland nalkas\nsamlas vi kring fulla fat.\n/: Bröder, låt oss ljuvligt svalkas\nav den ädla kroppkaksmat :/","Melodi: Värnamovisan | Text: Erik Baehrendtz | Melodi: Rhenvinets lov"],["Helan går","",6,0,[],"Helan går,\nSjung hopp fadderallanallanlej\nHelan går,\nSjung hopp fadderallanallanlej\nOch den som inte helan trår*,\nhan heller inte halvan får\nHelan går,\nSjung hopp fadderallanallanlej!\nHell and Gore\nHell and gore,\nchung hop Father Allan, Allan lay!\nHell and gore,\nchung hop Father Allan lay!\nAnd handsome in the Hell and tar,\nand hell or in the half and four.\nHell and gore,\nchung hop Father Allan lay!","Melodi: Helan går"],["Helan rasat","Hans Dalborg",6,0,[],"Helan rasat ner i våra magar.\nSkvalpar nu på botten, mol allen,\nI sin ensamhet den bittert klagar:\n\"Det är inte gott att vara en”\nSnart är halvan här, den härliga supen,\nalkoholiskt ren och silverklar,\ndansar som en vårbäck genom strupen,\nhamnar - plask - i helans budoar.\nMera brännvin\nMera brännvin i glasen\nMera glas på vårt bord\nMera bord på kalasen\nMera kalas på vår jord\nMera jordar kring månen\nMera månar kring mars\nMera marscher till Skåne\nMera Skåne, gudbevars!","Melodi: Längtan till landet | Text: Hans Dalborg | Melodi: Internationalen"],["Träspritens lov","Gabriel Wirkkala Georgsson och Tove Sanders",6,0,[],"Fordom odlade man vindruvsrankan\nav vars frukt man gjorde ädelt vin.\nNu man pressar saften ur en planka,\ndoftande av äkta terpentin.\nHöj nu bägaren, o broder, syster,\nLåt den svenska supen rinna kall.\nNer i strupen och om du är dyster,\nLåt oss dricka upp en liten tall.\nVar min Åbro\nJag hör domkyrkans klockor ringa\nKalmar klubbverkets, glas de klinga\nVar min åbro min akvavit\nJag mår så bra i denna skit\nAv något skäl kan jag ej förstå\nVarför alla från sexan vill gå\nFör vi har San miguel\nDela med dig är du snäll\nEtt vinnande bidrag från nationens sångbokstävling vid\nnationens 360-årsjubileum","Melodi: Längtan till landet | Text: Gabriel Wirkkala Georgsson och Tove Sanders | Melodi: Viva la vida - Coldplay"],["Livet är härligt","",6,0,[],"Livet är härligt!\nTavaritj, vårt liv är härligt!\nVi alla våra små bekymmer glömmer\nnär vi har fått en tår på tanden, SKÅL!\nTag dig en vodka!\nTavaritj, en liten vodka!\nGlasen i botten vi tillsammans tömmer,\ndet kommer mera efter hand, SKÅL!\nHyfsvisan\nKors i allsin dar,\nhar du brännvin kvar!\nÄr du sparsam eller snål?\nSkål!\nMors lilla Olle\nMors lilla Olle på krogen satt.\nRosor på kinden men blicken var matt.\nTänderna små liksom näsan var blå:\n”Bara jag kunde så skulle jag gå.”","Melodi: Röda kavalleriet | Melodi: Mors lilla Olle"],["En liten sup nu kommer","Ulf Anton Waller Kaustinen",6,0,[],"En liten sup nu kommer\nOck så minnesluckor.\nNu nalkas du, bakfyllan\nDå jag på toan bor.\nMed pin och orätt ilska\nTill allt som nånsin fötts,\nMig måndag morgon närma\nOch alla som jag stött.\nDen sjunde flaska bira\nPå släppet som jag drack,\nSpriten i min fickplunta\nSom jag gömt in i min frack,\nDe skola oss förglömma\nSparkontots fattigdom,\nAtt som resurs vi slita\nJa, hela året om.\nEtt vinnande bidrag från nationens sångbokstävling vid\nnationens 360-årsjubileum","Text: Ulf Anton Waller Kaustinen | Melodi: \"Den blomstertid nu kommer\""],["Månen","",6,0,[],"En gång i måna'n är månen full\nmen aldrig vi sett honom ramla omkull.\nStum av beundran hur mycket han tål\nhöjer vi glasen och dricker hans skål.\nMitt lilla lån\n/: Mitt lilla lån det räcker inte,\ndet går till öl och till brännvin. :/\nTill öl och brännvin\ngår det åt\noch till små flickor/pojkar emellanåt.\nMitt lilla lån det räcker inte,\ndet går åt till öl och brännvin","Melodi: Mors lilla Olle | Melodi: Hej tomtegubbar"],["Tänk om jag hade lilla nubben","",6,0,[],"/: Tänk om jag hade lilla nubben\nuppå ett snöre i halsen. :/\nJag skulle dra den upp och ner,\nså att den kändes som många fler.\nTänk om jag hade lilla nubben\nuppå ett snöre i halsen.\nHej tomtegubbar\nHej, tomtegubbar slå i glasen,\noch låt oss lustiga vara!\nHej, tomtegubbar slå i glasen,\noch låt oss lustiga vara!\nEn liten tid vi leva här\nmed mycken möda och stort besvär\nHej, tomtegubbar, slå i glasen\noch låt oss lustiga vara!","Melodi: Hej tomtegubbar | Melodi: Hej tomtegubbar"],["Piggorask","",6,0,[],"Åsså kommer det en tuting\ngenom luften som ett reaplan.\nOch den träffar som en snyting\nmitt i käften under röda kran.\nStörtar ner i lilla magen\nmed jätteplask, jätteplask, jätteplask.\nSen så blir man ganska dragen\nmen pigg och rask, piggorask, piggorask.\nGäddan hon slår\nNär gäddan hon slår uti vikar och vass,\noch solen går ner bakom Sjöbloms dass,\nja, då är det vår -\n(Supen tages)\noch helan går.\nInfanteriet\nJag är inte med i infanteriet,\nkavalleriet, artilleriet.\nJag är inte med i flyget,\nFör jag är en jesussoldat!","Melodi: Jazzgossen"],["Festen kan börja","",6,0,[],"Festen kan börja, ingen får sörja,\nhär finns det både brännvin och mat.\nHelan skall tömmas, sorgerna glömmas,\ningen får vara tråkig kamrat.\nKlappa mitt hjärta, fröjdas min själ,\nnubbar serveras genast nåväl.\nNu tar vi supen, öppna på strupen,\ngästernas välkomstskål.\nMinnet\nMinne, jag har tappat mitt minne.\nÄr jag svensk eller finne?\nKommer inte ihåg.\nInne! Är jag ute eller inne?\nJag har luckor i minne,\nsåna små alkohol.\nMen besinn dig, man tätar med det brännvin man får,\nfastän minnet och helan går.","Melodi: Vårvindar friska | Melodi: Memory"],["Finland är Finland","",6,0,[],"Finland är Finland\noch Finland är bra.\nVi har en pipeline\nmed sprit från Moskva.\nBada bastu och slå sig med ris.\nHacka hål i is.\nUti vår mage\nUti vår mage där växa en törst\nav hjärtans fröjd.\nFörst var den större, men nu är den störst.\nKom finkel och akvaviter,\nty törsten som tär och sliter\när djup kalmariter som Kalmarsund!","Melodi: Högt över havet | Melodi: Uti vår hage"],["Spritbolaget","",6,0,[],"Till spritbolaget ränner jag och bankar på dess port.\nJag vill ha sprit som bränner bra och gör mig skitfull fort.\nExpediten sade godda’,\nhur gammal kan min herre va?\nHar du nå’t leg, ditt fula drägg?\nKom hit igen när du fått skägg!\nMen detta var ju inte bra, jag vill bli full ikväll.\nOch genast en idé fick jag, dom har ju sprit på Shell.\nMånga flaskor stod där på rad,\nså nu kan jag bli full och glad.\nDen röda drycken åkte så ner,\nnu kan jag inte se någe’ mer.\nBlå och vit\n/: Jag vill bli kalmarit.\nJag vill bli blå och vit\noh snälla låt mig bli en kalmarit.\nOh ja, poängen dom,\nbryr vi oss inte om,\nför ikväll ska vi slå runt här gång på gång... :/\nRaj, raj, raj, raj, raj, raj...","Melodi: Snickeboa | Melodi: Mi lord"],["Svepskäl","Loth Ericsson",6,0,[],"All alkohol är bra för hyn\nden främjar ansiktsfärgen\noch ger oss skinn som rosentryn,\ndet känns rätt in i märgen.\nSå det är blott av hälsoskäl.\nVi dricker den för ve och väl.\nFör annars så dricker vi inte nån sprit\nvarken Skåne, Gauffin eller Akvavit!\nIdas fyllevisa\nDu ska inte tro vi bli fu-ulla,\nfall inte nån säger skål.\nOch fyller upp glasen med dri-icka,\nmed minst 40 % alkohol.\nDet gör så att alla blir dra-agna,\noch ger hela festen en skjuts.\nImorgon är vi helt utsla-agna,\ndå står vi på knä och kör buss.","Melodi: Rövarna i Kamomilla stad | Text: Loth Ericsson | Melodi: Idas sommarvisa"],["Vargen","",6,0,[],"Jag är en stor och farlig varg\nSom är så helvetes arg\nJag bor i skogen\nJag bor i skogen\nBland trän och planter\nJag äter gräs, varenda dag\nMen det vill jag inte ha.\nJag vill ha småbarn\njag vill ha småbarn\noch gamla tanter\nOm jag hade brännvin\nOm jag hade brännvin,\nRenat, Skåne, Aalborg, O.P, Vinbär\noch en liten Bäsk.\nAllihopa ställda på en rad,\nvad jag skulle vara glad!\nGlasen fylls med brännvin,\nRenat, Skåne, Aalborg, O.P, Vinbär\noch en liten Bäsk .\nLivet leker, sinnet fylls med hopp.\nNu skall lilla Bäsken drickas opp","Melodi: Med en enkel tulipan | Melodi: Om jag hade pengar"],["Måsen","",6,0,[],"Vers 1 & 2\nDet satt en mås på en klyvarbom\noch tom i krävan var kräket.\nOch tungan låddes vid skepparns gom\ndär han satt uti bleket.\n”Jag vill ha sill” hördes måsen rope\noch skepparn svarte: ”Jag vill ha OP”.\n/: Om blott jag får:/\nNu lyfter måsen från klyvarbom,\noch vinden spelar i tågen.\nOch OP:n svalkat har skepparns gom,\njag önskar blott att du såg’en.\nSå glad och lycklig, den gamle saten,\nhan sätter storsegel den krabaten.\nTill havs han far,\nOch halvan tar.","Melodi: När månen vandrar på fästet blå"],["Dom som är nyktra","Bosse Österberg",6,0,[],"Dom som är nyktra\ndom har inget roligt.\nDom har bara ansvar\noch alls inget tjolittlej faderulla\nmen vi som är fulla\nvi har bara kul nästan jämt.\nDet sägs att en mänska\nkan va’ utan brännvin\ndet stämmer kanhända\nmen se blott på den min\nsom pryder en absolutist –\nden är jävligt trist,\ndärför så sjunger vi så:\nDom som är nyktra...\nRöda havet\nVi gingo ned till Röda havet.\nVi lågo i där minst en kvart.\nMen inte blev vi röda av'et\nmen Röda havet det blev svart!\n48\n/: Men utav akvavit\nmänniskan till kropp och själ\nblir oskuldsfull och vit :/\nVi gingo ned till Lommabukten.\nVi lågo i där minst en kvart.\nMen inte blev vi av med lukten\nmen Lommabukten den blev svart.\nMen utav akvavit …\nVi gingo ner till Finska viken.\nVi lågo i där minst en kvart.\nMen inte blev vi av med skiten\nmen Finska viken den blev svart.\nMen utav akvavit …\nVi gingo till Systembolaget.\nVi stod i kö där minst en kvart.\nMen inte blev vi fulla av'et\nmen svenska staten den fick skatt.\nMen utav akvavit...\nÄn en gång däran\nText och musik: Evert Taube\nÄn en gång däran, bröder,\nän en gång däran\nFöljom den urgamla seden.\nIn till sista man, bröder,\nin till sista man,\ntrotsa vi hatet och vreden!\nBlankare vapen sågs aldrig i en här\nän dessa glasen, kamrater: I gevär!\nÄn en gång däran, bröder,\nän en gång däran\nSvenska hjärtans djup –\nhär är din sup!\nLivet är så kort, systrar,\nlivet är så kort.\nLek det ej bort, nej, var redo!\nKämpa mot allt torrt, systrar,\nkämpa mot allt torrt!\nTänk på de gamla som skredo\nfram, utan tvekan i floder av champagne,\nstyrkta från början av brännvin\nfrån vårt land!\nKämpa mot allt torrt, systrar,\nkämpa mot allt torrt!\nSvenska hjärtans djup -\nhär är din sup!","Text: Bosse Österberg | Melodi: Du är den ende | Melodi: Skrattvisa ur Orfeus i underjorden"],["Jag har aldrig var’t på snusen","",6,0,[],"Jag har aldrig var’t på snusen,\naldrig rökat en cigarr, halleluja!\nMina dygder äro tusen,\ninga syndiga laster jag har.\nJag har aldrig sett nåt naket,\ninte ens ett litet nyfött barn.\nMina blickar går mot taket\ndärmed undgår jag frestarens garn.\nHalleluja! Halleluja!\nBacchus spelar på gitarren,\nSatan spelar på sitt handklaver.\nAlla djävlar dansar tango,\nsäg vad kan man väl önska mer?\nJo, att alla bäckar voro brännvin,\nKalmarsund var fullt av bayerskt öl,\nkonjak i varenda rännsten,\noch punsch i varendaste pöl!\nOch mera öl! Och mera öl!","Melodi: O, hur saligt att få vandra"],["Imbelupet","",6,0,[],"Imbelupet glaset står på bräcklig fot,\nkalla pilsnerflaskor luta sig därmot.\nMen där nere - miserere -\nuti magens dunkla djup,\nsitter djävulen och väntar på en sup.\nImbelupet glaset står på bräcklig fot,\nkalla pilsnerflaskor luta sig därmot.\nMen där nere - miserere -\nuti magens dunkla valv,\nsitter djävulen och väntar på en halv.\nImbelupet glaset står på bräcklig fot,\nkalla pilsnerflaskor luta sig därmot.\nMen där nere - miserere -\nuti magen härs och tvärs,\nsitter djävulen och väntar på en ters.","Melodi: Kors på Idas grav"],["Vikingen","Povel Ramel, 1964",6,0,[],"En viking vill ha livets vann, hurra, hurra!\nDen hastigt i mitt svalg försvann, hurra, hurra!\nTill kalv, till oxe, till fisk, till fläsk,\nnär kärringar bara dricker läsk,\ndå vill alla vikingar ha en bäsk!\nNär vi har druckit bäsken slut, tragik, tragik!\nDå bäres varje viking ut som lik, sig lik,\noch sen om vi vaknar vi sjunger en bit,\nsen korkar vi upp Skånes Akvavit.\nSkål för alla vikingar som kom hit!\nOm cykling\nMan cyklar för lite, man röker för mycket\noch man är fasen så liberal\nnär det gäller maten och spriten.\nJag borde slutat för länge sedan\nmen denna sup är så liten.\nVad tjänar att hyckla?\nTids nog får man cykla!","Melodi: When Johnny Comes Marching Home | Text: Povel Ramel, 1964 | Melodi: Väva vadmal"],["Kalmariten","Ulf Anton Waller Kaustinen",6,0,[],"Sånganförare: Har ni fått snaps?\nAlla: Aj, aj, kapten!\nSånganförare: Jag hör er inte!\nAlla: Aj, aj, kapten!\nSånganförare: Åååååååååh...\nAlla: Vem bor så bekvämt på Svartmangatan 3\nKALMARITEN!\nSå snygg, ambitiös, nästan som en kliché\nKALMARITEN!\nJag varnar dig recce visst finns det en risk\nKALMARITEN!\nFår reccar att stanna och göra all disk\nKALMARITEN!\nSånganförare: Redo!\nAlla: Kal-ma-ri-ten\nKal-ma-ri-ten\nKal-ma-ri-ten\nKAL-MA-RI-TEEEEEN!!!\nEtt vinnande bidrag från nationens sångbokstävling vid\nnationens 360-årsjubileum","Text: Ulf Anton Waller Kaustinen | Melodi: Svampbob Fyrkant"],["Smedsvisan","Anders Nyberg & Eva Nyberg",0,0,[],"En gång i min ungdom, älskade jag,\nen flicka med ljuva och rena behag.\nHon lovfte mig tro, i lust och i nöd\nallt intill den blekaste död.\n/: Hej hopp faderi faderalladerej :/\nHon lovfte mig tro, i lust och i nöd\nallt intill den blekaste död.\nHon var som en lilja, vit uti hyn,\nden fagraste flicka som skådats i byn.\nEtt smittande skratt, en lustiger sång,\nvi älskade sommaren lång.\n/: Hej hopp faderi faderalladerej :/\nEtt smittande skratt, en lustiger sång,\nvi älskade sommaren lång.\nMen kärleken vissna kärleken dog,\nvid Mikaelsmäss hade flickan fått nog.\nHon fann sig en riker, högfärdig man,\nsa ”tack och adjö” och försvann.\n/: Hej hopp faderi faderalladerej :/\nHon fann sig en riker, högfärdig man,\nsa ”tack och adjö” och försvann.\nNu står jag vid städet, sliten och grå,\nmen hammaren bultar och hjärtat likså.","Text: Anders Nyberg & Eva Nyberg"],["Men aldrig den flickan kommer igen,","",0,0,[],"hon är hos sin nyfunne vän.\n/: Hej hopp faderi faderalladerej :/\nNej, aldrig den flickan kommer igen,\nmen sången den trallar jag än.\nTårtan\nSocker, grädde, nötter och mandelflarn.\nOch så sist, men inte minst,\nen liten ros av marsipan.\nSmörkräm, krikon, snabbkräm och gott gelé.\nFrasses deg och en flaska saft,\noch så en liten klick med sylt.\nTa ett glas\nOh, ta ett glas,\noh, ta ett glas.\nTy vinet för oss samman.\nOch den som inget glas vill ha,\nhan sjunger och är lika glad.\nMen ta ett glas,\nja ta ett glas,\nför livets fröjd och gamman.","Melodi: Oh, Tannenbaum"],["Bordeaux, Bordeaux","",0,0,[],"Jag minns än idag hur min fader\nkom hem ifrån staden så glader\noch rada’ upp flaskor i rader\noch sade nöjd som så: ”Bordeaux, Bordeaux!”\nHan drack ett glas, kom i extas,\noch sedan blev det stort kalas.\nOch vi små glin, ja vi drack vin\nsom första klassens fyllesvin.\nOch vi dansade runt där på bordet\noch skrek så vi blev blå: ”Bordeaux, Bordeaux!”\nSnålskål\nJag la mig på min franska bil\nPå magen ner mot huven.\nTill spolarvätskans sprutmunstycke lossade jag skruven.\nStrålen var kall och klar, men smaken något rå.\nTrots allt ett billigt sätt, bli full på svart Renault!","Melodi: I sommarens soliga dagar | Melodi: Jag fångade en räv"],["Groggens mening","",0,0,[],"Ända sen antikens dar\nfilosofer tvistat har\nom vad groggens väsen är.\nMan har enats om det här:\nTonic är, på något vis,\ngrogg, fast utan gin och is.\nNu har vi ljus\nNu har vi ljus här i vårt hus\npappa har tagit sig ett riktigt rus.\nMamma är full, ramlar omkull,\nvälter ett ljus.\nNu så brinner alla barnen inne,\nfemton upp och lilla Karl i minne.\nFarfar trogen, lämnar plogen\noch drar åt skogen mot krogen.","Melodi: Blinka lilla stjärna | Melodi: Nu är det jul"],["Feta fransyskor","",0,0,[],"Feta fransyskor som svettas om fötterna\nde trampar druvor som sedan skall jäsas till vin.\nTranspirationen viktig e'\nty den ge\nfin bouquet.\nVårtor och svampar följer me',\nmen vad gör väl de'.\nFör...\nVi vill ha vin, vill ha vin, vill ha mera vin\näven om följderna blir att vi får lida pin.\nFlaskan och glaset gått i sin.\nHit med vin, mera vin!\nTror ni att vi är fyllesvin?\nJa! fast större!\nCrambamboli\nNär Gud en gång den vackra världen skapade\ndå fann Han allting ganska gott.\nHan tyckte dock, att Adam borde\nfå något drickbart på sin lott.\nSå satt Han pricken över i\noch skapade crambamboli,\ncram-bim-bam-bamboli, crambamboli!\n62\nNapoleon, han var en tapper krigare\nsom du, som jag, som mången annan.\nOch vet du vad om honom sades\nvar grunden till hans tapperhet?\nNapoleon med sitt kompani\nhan drack ett glas crambamboli,\ncram-bim-bam-bamboli, crambamboli!\nVill du som jag hos flickor göra lycka?\nDet kan gå bra, det kan gå galet.\nOch vet: det är ett vågat stycke,\nsom tarvar ganska mycket mod.\nMen jag vill hålla ett mot tri\natt hjälpa skall crambamboli,\ncram-bim-bam-bamboli, crambamboli!\nCrambamboli, ja, det är jordens härlighet\noch världens salighet, förvisso!\nEn härlig dryck för tjocka magar\noch för den magre ganska gott.\nAll världens split och tyranni\nskall vika för crambamboli,\ncram-bim-bam-bamboli, crambamboli!","Melodi: Marsche militaire"],["På GH nation","Ulf Kvensler",0,0,[],"På GH nation där är det sorgligt,\ndär är det sorgligt, ja, där vill man inte va.\nPå GH nation där är det sorgligt,\ndär vill man lägga sig och tvärdö.\nMen på Kalmar, men på Kalmar,\ndär kan man dansa natten lång.\nJa på Kalmar, ja på Kalmar,\ndär kan man dansa natten lång.\nMen på GH nation där är det sorgligt,\ndär är det sorgligt, ja, där vill man inte va.\nPå GH nation där är det sorgligt,\ndär vill man lägga sig och tvärdö.\nNudist under fracken\nNär man dör har man ingenting för\natt man alltid har gjort så som man bör.\nHellre va' en glad charmör,\nhålla barnasinnet vid god vigör.\nAlla vet att imorgon är det\n64\ndenna kväll som kan ställa till förtret,\nmen på oss så går den bet:\neftertankens kranka blekhet.\nDansen går i varma frackarna.\nSvetten rinner nerför nackarna,\nså fyll på med öl från backarna.\nDansen stör din vätskebalans.\nSkänk en tanke åt de stackarna\nsom snor runt i höga klackarna.\nHoppas det hon trampat på\ninte var din tå.\nMen vadå? Det får gå!\nVi mår bäst när det är fest! Hej!\nSolo: Hoppsansa, se upp i svängarna\nså ni ej gör slut på pengarna.\nAkta er för efterslängarna:\nRamlösa släcker törsten lika bra!\nLyss ej på den där; han svamlar mest.\nHär är gamman, här är fart och fest.\nGlada vänners lag vi gillar bäst:\nBacchus är vår hedersgäst.\nDansen går i varma frackarna.\nDansen går på höga klackarna.\nGlad och god ska mänskan va';\ndå mår hon riktigt bra. TJO!","Melodi: Hårgalåten | Text: Ulf Kvensler | Melodi: Nudistpolka"],["Vårvindar friska","Julia Nyberg",0,0,[],"Vårvindar friska, leka och viska,\nlunderna kring likt älskande par.\nStrömmarna ila, finna ej vila,\nförrän i havet störtvågen far.\nKlappa, mitt hjärta, klaga och hör\nvallhornets klang bland klipporna dör.\nStrömkarlen spelar,\nsorgerna delar\nvakan kring berg och dal.\nHjärtat vill brista,\nack, när den sista\ngången jag hörde kärlekens röst.\nÖgonens låga,\navskedets plåga,\nmun emot mun och klappande bröst.\nFjälldalen stod i grönskande skrud.\nTrasten slog drill på drill för sin brud.\nStrömkarlen spelar,\nsorgerna delar\nvakan kring berg och dal.\n66\nTelefonen\nJag har en telefon, som går till himmelen\noch när jag ringer på, så svarar dom som så:\nHallå, hallå, hallå, vad är det som står på?\nJo, det är Frälsningsarmén som ringer på.\nJag har kastat alla sorgerna bakom min rygg,\noch jag ser dom inte mer, och jag ser dom inte mer.\nOch jag har kastat alla sorgerna bakom min rygg,\noch jag ser dom inte mer.\nJag är så lycklig, jag är så lycklig,\nmåndag, tisdag, onsdag, torsdag, fredag, lördag, söndag\nJag är så lycklig, jag är så lycklig, hela veckan lång.\nJag tar spårvagnen, upp till himmelen\nOch det är Gud som kör, och Jesus konduktör\nDet går så lätt, lätt, lätt\nNär man har kk-kort\nUpp till himmelen\nJag är så lycklig …","Melodi: Traditionell | Text: Julia Nyberg"],["En kalmarit","Anna Bennet",0,0,[],"Det var en gång tio reccar\nsom skulle mot Kalmar gå.\nOm Uppsalas alla faror\nde visste de inte då.\nOch styrstångsfulla studenter\nhar svårt att hålla balans\nEn for in i två docenter\noch fick åka ambulans\nEn kalmarit (en kalmarit)\nEn kalmarit (en kalmarit)\nhär finns det plåster\noch öl från kloster\nVälkommen hit!\nKom till vårt vackra vänskapslag\ndet finns nog inget av dess slag\nVi har aptiten\nhär flödar spriten\nEn kalmarit.\nSå nu var det nio reccar\npå väg mot nationen vår\nStudentlivet är ett hårt liv\n68\noch vägen är mycket svår\nEn körde för många tentor\nhon jagas av CSN\nTre hamna i kön till Stocken\nvi har inte sett dom sen\nEn kalmarit (en kalmarit)\nEn kalmarit (en kalmarit)\nHär finns det vänner\npapper och penner\nVälkommen hit!\nKom till vårt vackra vänskapslag\ndet finns nog inget av dess slag\nVi har aptiten\nhär flödar spriten\nEn kalmarit\nFem reccar på väg mot Kalmar\nsmå popsnören på en rad\nMen tygskor och parkasjackor\när inget för vinterlag\nTvå frös ihjäl sig på vägen\noch en flydde genast hem\nEn halkade ner i Fyris\noch fastnade i dess slem\nEn kalmarit (en kalmarit)\nEn kalmarit (en kalmarit) (byte av sida)\n69\nHär är vi heta\noch indiskreta\nVälkommen hit!\nKom till vårt vackra vänskapslag\ndet finns nog inget av dess slag\nVi har aptiten\nhär flödar spriten\nEn kalmarit.\nVår ensamma lilla recce\nhar nu lyckats komma fram\nOch nya vänner kring bordet\navlöser dom som försvann\nEtt varningens ord ska sägas\n- Ni utsvultna i vår sal,\nför den som har levt på pasta\nblir gasquematen lätt fatal\nEn kalmarit (en kalmarit)\nEn kalmarit (en kalmarit)\nHär fyller maten\nupp hela faten\nVälkommen hit!\nKom till vårt vackra vänskapslag\ndet finns nog inget av dess slag\nVi har aptiten\nhär flödar spriten\nEn kalmarit","Text: Anna Bennet | Melodi: Havet är djupt"],["Ode till ölet","",0,0,[],"Tu tu tu Tuborg\nOch ca ca ca Carlsberg\nÄr det bästa\n   pilsner som jag vet\nTu tu tu carlsberg\nOch ca ca ca Tuborg\nÄr det bästa\n   ölet som jag vet\nTu tu tu Ölberg\nOch ca ca ca Pilsborg\nÄr den bästa\n   biran som jag vet\nVar nöjd med ölen\nVar nöjd med allt som ölen ger\noch även om du dubbelt ser.\nGlöm bort bekymmer, sorger och besvär.\nVar glad och nöjd för vet du vad\nen folköl gör ju ingen glad.\nVar nöjd med ölen som vi dricker här.\n71\nBalladen om den kaxiga myran\nText & musik: Stefan Demert\nJag uppstämma vill min lyra\nFast det blott är en gitarr\nOch berätta om en myra\nsom gick ut att leta barr\nHan gick ut i morgondiset\nsen han druckit sin choklad\noch försvann i lingonriset\nbåde mätt och nöjd och glad\nBåde mätt och nöjd och glad\nDet var långan väg att vandra\nDet var långt till närmsta tall\nHan kom bort ifrån dom andra\nmen var glad i alla fall\nFemtio meter ifrån stacken\njust när solnedgången kom\nhitta han ett barr på backen\nsom han tyckte mycket om\nSom han tyckte mycket om\nHan fick streta han fick stånka\nhan fick spänna varje lem\noch så började han kånka\n72\npå det fina barret hem\nNär han gått i fyra timmar\nkom han till en ölbutelj\nHan såg allting som i dimma\nbröstet hävde som en bälg\nBröstet hävde som en bälg\nDen låg kvar sen förra lördan\nJag ska släcka törsten min\ntänkte han och lade bördan\nutanför och klättra in\nHan drack opp den sista doppen\nsom fanns kvar i den butelj\nSedan så slog han sig för kroppen\noch skrek ut jag är en älg\nOch skrek ut jag är en älg\nEj ett barr jag drar till tjället\nNu så ska jag ta mig fan\nlämna skogen å istället\nvända opp och ner på stan\nMen han kom aldrig till staden\nNågot spärrade hans stig\nEn koloss där låg bland bladen\noch vår myra hejdar sig\nOch vår myra hejdar sig (byte av sida)\n73\nDen var hiskelig att skåda\nden var stor och den var grå\noch vår myra skrek: Anåda!\nom du hindrar mig att gå\nHan for ilsken på kolossen\nsom låg utsträckt i hans väg\nMen vår myra kom ej loss sen\nHan satt fast som i en deg\nHan satt fast som i en deg\nSorgligt slutar denna sången\nMyran stretade och drog\nMen kolossen höll en fången\nTill han svalt ihjäl och dog\nUndvik alkoholens yra\ndu blir stursk men kroppen loj\nOch om du är född till myra\nbrottas aldrig med ett Toy\nBrottas aldrig med ett Toy","Melodi: Trampa på gasen | Melodi: Var nöjd med allt som livet ger"],["Vi gå över daggstänkta berg","Olof Thunman",0,0,[],"Vi gå över daggstänkta berg, fallera,\nsom lånat av smaragderna sin färg, fallera.\n/: Sorger har vi inga, våra glada visor klinga,\nnär vi gå över daggstänkta berg, fallera. :/\nDe gamla och kloka må le, fallera,\nvi äro ej förståndiga som de, fallera.\n/: Men vem skulle sjunga, om våren den unga,\nom vi vore kloka som de, fallera? :/\nO, människor, förglömmer er gråt, fallera,\noch kommer och följer oss åt, fallera!\n/: Si fjärran vi gånga, att solskenet fånga.\nJa, kommer och följer oss åt, fallera! :/\nSå gladeligt ha hand i hand, fallera,\nnu går vi till fågel Fenix land, fallera!\n:/ Till ett sagoland som skiner av kristaller och rubiner.\nNu går vi till fågel Fenix land, fallera! :/","Text: Olof Thunman | Musik: Edwin Ericsson"],["Fru Svensången","Povel Ramel",0,0,[],"Sjung om fru Svenssons lyckliga karl\nlåt honom plöja i ungdomens fåror\nFem gamla hjärtan i sprit jag har\nå en ljus elefant i ett snår\nInga stoppar den\ni vårat linneskåp\nLoppor tär vår vän\nsom idisslar en sko när vi snyta en rund liten hund\ndär den här lilla bagaren bor\ndär den här lilla bagaren bor\nHursa?\nMer öl\nJag är en lugn person, med takt och ton,\nmåttfull och balanserad.\nJag är tyst och still och det ska mycket till,\ninnan jag blir exalterad.\nMen jag har en last, som håller mig fast\ni ett järngrepp varje fredag.\nNär veckan är slut, ger jag mig ut\noch flyr från varda’ns leda.\n76\n/: Jag vill ha – mer öl! Så ge mig – mer öl! :/\nTusen bubblor som glimmar,\nflaskor så långt man ser,\nskum i glaset som simmar,\njag vill ha – mer!\nMed svalget torrt, jag drömmer mig bort,\nen kväll när svetten lackar.\nSå ge mig lagom kallt, lagom malt,\ni lagom stora backar.\nGe mig Kaltenberg och Falkenberg\noch Tuborg det som finnes.\nOch ge mig sen, en Heineken,\nen Spendrups och en Guinness.\nJag vill ha mer öl...\nEtt jätteglas, Stella Artois,\ni Carlsberg vill jag plaska.\nJag tar en Till och en snabb Dab,\ninnan du hinner säga flaska.\nGe mig en Pripps och en påse chips\nannars får du en blåtira.\nEn jättepråm, med Kaiserdom,\nen pils, en bärs, en bira.\nJag vill ha mer öl...","Text: Povel Ramel | Melodi: Studentsången | Melodi: Mer jul"],["Jag såg mamma stycka tomten","Fredrik Jonsson",0,0,[],"Jag såg mamma stycka tomten jag,\nmed sin sekatör och polygrip.\nNär tomten drack sin glögg,\nmor i nacken yxan högg.\nNär tomten föll till golvet gick hon lös med vinkelslip.\nJa, som en galning löpte mor amok,\nbenen bröts och tänderna flög ur.\nOch tänka er minsann,\natt pappa han försvann\nsamma dag som tomtens liv tog slut...\nBort allt vad OD gör\nBort allt vad OD gör,\nbort med Allmänna sången!\nGe oss en glad amatör den här gången:\nvår Kalmarkör.\nVacker är kanske deras sång,\nmen har dom hembakt varje gång?\nKom öva skalor i Kalmars lokaler,\ndu får en vän.","Text: Fredrik Jonsson | Melodi: Jag såg mamma kyssa tomten | Text: Magnus Georgsson | Melodi: Bort allt vad oro gör"],["Treo Comp","",0,0,[],"Morgonstund med smak av döda bävrar,\nfrukostmorgonen är över oss.\nHur vi stretar, hur vi alla vägrar,\nså går solen likt förbannat opp.\nSnart är dagen här med hemska plågor,\nhuvudvärk och ångest, elände men:\nDet finns faktiskt ett glas som dig kan rädda;\nTreo Comp, vår frälsare och vän!\nO jävla natt\nO jävla natt, jag har så ont i pannan\noch både vinet och ölet är slut.\nI min spegel ser jag någon annan,\no stackars människa hur du ser ut!\nMitt hår är stripigt, ögonen är röda,\nom någon stör mig lär de nog förblöda.\nÅh – vilket mord! Vem bankar på min port?\nJo, Livets ord! Jag spyr på deras skor.\nO jävla natt! Hur kunde jag bli så full?","Melodi: Längtan till landet | Melodi: O helga natt"],["Biskop Franzèns bordsvisa","Frans Michael Franzén",0,0,[],"När skämtet tar ordet vid vänskapens bord,\nmed fingret åt glaset som dofta,\nså drick och var glad; på vår sorgliga jord\nman gläder sig aldrig för ofta.\nEn blomma är glädjen, idag slår hon ut,\nimorgon förvissnar hon redan.\nJust nu, då du kan, hav en lycklig minut\noch tänk på det kommande sedan.\nVem drog ej en suck över tidernas lopp?\nDock sitt ej och dröm på kalaset.\nHär lev i sekunden, och hela ditt hopp\nse fyllas och tömmas i glaset.\nHär sörj ej för glaset: och fullt så töm ut,\nom tomt, så försänd det att fyllas;\noch minns, att det sköna och goda förut\nsen glädjen och nöjet må hyllas.\nTy ägne vi först åt värdinnan en skål,\nvad vore vår fröjd utan henne?\nSen prise vi värden och särskilt hans bål.\nVad vore vårt mod utan denne?\nDem båda förene ett glas och en sång:","Text: Frans Michael Franzén | Musik: Olof Åhlström"],["Ofvandahls","Henrik Arnberg",0,0,[],"Hundra år sen ungefär\nOfvandahl han sa så här:\nSkriva dikter ger mig ingen\npeng i pung, nej blott misär.\nDet nå't annat måste bli,\nvarför ej ett bageri?\nRunda bullar små gör mig till miljonär.\nOfvandahls, kaffe med avec\nOfvandahls, Landings stora skräck,\nOfvandahls napoleoncanapé\nger oss krafter nog att vandra vidare.\nUnder åren som har gått,\nmånga styrketåren fått\noch en del av dem på Ofvandahls,\nnär det känns trist och grått.\nEfter nattens hårda slit,\nnär det ej finns mera sprit,\ndå man tar en kaffetår och lever opp.\nOfvandahls, kaffe med avec…\nJa, sen slumpa' det sig så\natt V-Dala råka' få","Text: Henrik Arnberg | Melodi: Ovan där"],["Ofvandahls en dag","Anders Westermark",0,0,[],"när övriga inkomster var rätt små.\nSom en högre slags försyn.\nSom en kringla ifrån skyn.\nVi har sålt det nu, men det var kul ändå.\nOfvandahls, kaffe med avec…\n1600-talet\n1600-talet var en härlig tid!\nGustav II Adolf med sin här i strid!\nDe stodo ut i rök och damm,\nsvärd vid svärd och arm vid arm;\nÄnteligen dagas skördetid!\nNu blåses stridssignal, nu rycker hären fram!\nVärjor dras och snart hörs stridens ljuva larm:\nDär spränges en häst, där kapas en hals,\nutav en knekt blir det inget alls,\ni ett hav av blod vadar tappra svenskar fram.\nDen lede fi huggs ner till sista man, Hurra!\nAlla städer sättes uti brand, Hurra!\nDär brännes vad ej plundras kan\noch dödar man ej så sårar man,\noch då dör de av infekterade sår! Gutår!","Text: Anders Westermark | Melodi: When Johnny comes marching home"],["Stadigt rus","",0,0,[],"Min resa var mot dimman\nLångt bortom alla tömda glas\nDär allting är förgängligt\nOch alla gränser har\nFör stunden grumlats ur\nJag ville se mirakler\nOch höra ord som ”ge mig sprit”\nBlir lurad av en styrka\nSom sen försvinner när jag\nStillat har min törst\nStadigt rus\nDär en man utan namn\nGer mig sprit\noch allting föds på nytt\nOch så när allt förändras\nNär spriten inte längre finns\nDå ser jag oss tillsammans\nOch då är resans start\nDet enda som vi minns\nStadigt rus\nDär en man utan namn\nGer mig sprit\noch allting föds på nytt\n84\nVadsbro Skvadrons Visa\n/: Var skall jag mig en flicka finna,\nSom är så skön som alpens ros? :/\nFör du och jag, ska bygga oss en boning, men var?\nJo där näktergalen sina drillar slå, ja drillar slå.\nDär månen lyser så förtroligt, där bäcken rasslar, böljan\nslå.\n/: Den vän jag ständigt har i tankarna,\nFör den jag leva vill och dö. :/\nFör du och jag...\n/: Vi skola allesammans vandra,\nPå livets törnbeströdda stig :/\nFör du och jag...\n/: Vi skiljas aldrig från varandra,\nFörr´n döden skiljer mig från dig. :/\nNej, du och jag...\nMycket långsamt\n/: När vi skall vandra ner i graven,\nDå följa blad och blommor med :/\nFör du och jag...","Melodi: Stad i ljus"],["När jag är fuller","",0,0,[],"När jag är fuller då är jag glad,\nfan vet om jag ej är vacker.\nJag vandrar kring i vår lilla stad\nibland lyxhus och baracker.\nJag sjunger ljuvligt en serenad,\ndet gör jag bara när jag är glad,\n/: och full och vacker. :/\nNär jag är fuller då är jag stark,\nfan vet om jag ej är modig.\nDå kan jag slå vem som helst i mark,\nså han blir trasig och blodig\nJag välter träden i våran park,\ndet gör jag bara när jag är stark,\n/: och full och modig. :/\nNär jag är fuller då är jag rik,\nfan vet om jag ej är snille.\nOch dör jag blir jag ett vackert lik,\nbegravs med gravöl och gille.\nI himlen möts jag av hornmusik,\ndet gör man bara när man är rik,\n/: och är ett snille. :/\nMen när jag vaknar upp nästa dag,\nuppå ett enkelrum med galler.","Melodi: När månen vandrar på fästet blå"],["Norge","Hasse Alfredsson och Tage Danielsson",0,0,[],"Det sägs ju att man inte ska generalisera\noch säga till exempel att Tyskland ej är bra,\ndet ska man inte heller, i allmänhet jag tror,\nmen detta gäller inte om det land där norrmän bor.\nNorge, Norge det är ett ruttet land.\nNorge, Norge ett jävla rövarband.\nNorrmän, norrmän, de fiskar dålig torsk.\nOm du ser en slisk\noch han stinker utav fisk\när han utan tvivel norsk.\nJa, norrmän är förskräckliga, så fula och så små\nmed slipsar som är äckliga med norska blommor på.\nDom larvar och sjåpar sig och joddlar och står i.\nMan frågar sig när man dom ser:\nHur korkad kan man bli?\nNorge, Norge det stiger aldrig frem\nNorge, Norge med det tusen hjem.\nNorge, Norge du skamfläck på vår jord.\nKänn det står en stank\nända ut till Doggers Bank\nfrån ditt norska smörgåsbord.","Text: Hasse Alfredsson och Tage Danielsson | Melodi: Lively"],["Man borde ge en riktig smäll till Norge som nation","Herman Sätherberg",0,0,[],"för att dom har så fula fjäll och taskig folkpension.\nDom gör ju inga bilar och cyklarna är kass\noch deras ende store skald, han heter Peter Dass.\nNorge, Norge är världens sämsta land.\nNorrmän, norrmän dom borde tas omhand.\nNorrmän, norrmän, det folk som herren gav\nen hopplös håg\noch en panna som är låg\nså att hatten trillar av.\nGlad liksom fågeln\n/: Glad såsom fågeln i morgonstunden\nhälsar jag våren i friska naturn.\nLärkan mig svarar och trasten i lunden,\närlan på åkern och orren i furn. :/\n/: Se, hur de silvrade bäckarna små\nhoppa och slå, hoppa och slå\nvänliga armar kring tuvor och stenar!\nSe, hur det spritter i buskar och grenar\nav liv och av dans, av liv och av dans\ni den härliga vårsolens glans. :/\nUti vårsolens glans!\n89\nSvinnsta skär\nText & musik: Gideon Wahlberg\nDansen den går uppå Svinnsta skär,\nhör klackarna mot hällen.\nGossen han svänger med flickan kär\ni stilla sommarnatt.\nBlommorna dofta från hagen där\noch många andra ställen,\noch mitt i taltrastens kvällskonsert\nhörs många muntra skratt\nLjuvlig är sommarnatten,\nblånande vikens vatten.\nOch mellan bergen och tallarna\nhöres musiken och trallarna.\nFlickan har blommor i håren,\nmånen strör silver i snåren.\nAldrig förglömmer jag stunderna där\nuppå Svinnsta skär.\nGossen tar flickan uti sin hand\noch vandrar nedåt stranden,\nlossar sin jolle och ror från land\nbland klippor och bland skär.\nDrömmande ser han mot vågens rand,\nsom rullar in mot sanden,","Text: Herman Sätherberg | Melodi: Prins Gustaf"],["Härjarevisan","Hans Alfredsson",0,0,[],"Liksom våra fäder vikingarna i Norden\nDrar vi landet runt och super oss under borden\nbrännvinet har blitt ett elixir för kropp såväl som själ\nKänner du dig liten och ynklig på jorden\nväxer du med supen och blir stor uti orden\nslår dig för ditt håriga bröst\noch blir en man från hår till häl.\nJa, nu skall vi ut och härja\nsupa och slåss och svärja\nbränna röda stugor, slå små barn\noch säga fula ord.\nMed blod skall vi stäppen färga\nNu änteligen lär ja’\nkunna dra nå’n riktig nytta av\nmin Hermodskurs i mord.\nHurra, nu skall man äntligen få röra på benen\nhela stammen jublar och det spritter i grenen\ntänk att än en gång få spränga fram på Brunte i galopp.\nDin doft, o kära Brunte, är trots brist i hygienen\nför en vild mongol minst lika ljuv som syrenen.\nTänk, att på din rygg få rida runt i stan och spela topp.","Text: Hans Alfredsson | Melodi: Gärdebylåten"],["Uti vår hage","Hugo Alfvén",0,0,[],"Vers 1 & 2\nUti vår hage där växa blå bär.\nKom hjärtans fröjd\nVill du mig något, så träffas vi där!\nKom liljor och aquileja,\nKom rosor och saliveja,\nKom ljuva krusmynta, kom hjärtans fröjd!\nFagra små blommor där bjuda till dans.\nKom hjärtans fröjd\nVill du, så binder jag åt dig en krans!\nKom liljor och aquileja,\nKom rosor och saliveja,\nKom ljuva krusmynta, kom hjärtans fröjd!\nImsig vimsig blir man\nImsig vimsig blir man utav lite vin.\nKlättrar upp på stolen, verkar piggelin.\nRamlar under bordet, sussar en minut.\nVaknar av att vinet i glaset tagit slut.","Text: Hugo Alfvén | Melodi: Imse vimse spindel"],["Gudarnas dryckesvisa","Mikael Gustafsson",0,0,[],"Som en härlig ungdomskälla\nSom ett spabesök i Hjo\nKänner vi när vi får dricka\nDrycken som får oss att tro\nGudarna de håller med oss\nI varenda religion\nDrick ur bägarn nu och hurra\nHurra för Kalmar nation\nDionysus han är med oss\nSlut nu ögonen och njut\nSkåla i den sanna glädjen\nDrick nu ur och gör salut\nGudarna de håller med oss...\nTeleportera dina sinnen\nTill ett högre attribut\nLåt sen gladeligen minnen\nIfrån kvällen suddas ut\nGudarna de håller med oss...","Text: Mikael Gustafsson | Melodi: Pärleporten"],["Gamla punschvisan","",5,0,[],"/: Punschen kommer, punschen kommer\nljuv och sval.\nGlasen imma, röster stimma\ni vår sal.\nSkål för glada minnen!\nSkål för varje vår!\nInga sorger finnas mer,\nnär punsch vi får. :/\nPunsch filibom\nPunsch, punsch filibom-bom-bom,\när en gudadryck för en läckergom.\nPunsch, punsch filibom-bom-bom,\när en gudadryck, filibom.\nVi har ju både Cederlunds och Grönsteds Blå\noch Carlshamns Flagg och lilla Caloric.\nJag dricker inte sodavatten,\nsodavatten, sodavatten.\nJag dricker inte sodavatten;\nKom ge mej lite punsch!","Melodi: Änkevalsen ur Glada Änkan | Melodi: Ritsch Ratsch..."],["Kaffevisan","",5,0,[],"Vi har ätit och mår så väldans bra,\noch nu vill alla säkert kaffe ha.\nSnart får vi göra stönen\nnär vi sjunger ”kaffebönen”.\nDet skall höras uti hela denna sta´.\nKaffe, punschen, kaffe, punschen och likör\nger åt alla här ett väldigt gott humör.\nOch det kan ni ge er katten,\nvi ska punscha hela natten,\ndricka kaffe, punschen, kaffe och likör.\nOfta får man höra ordet kaffetant,\nhusets herre säger ofta helt galant:\n”Du min rara, du min sköna,\nälskar du din kaffeböna\nmer än mig, det kan väl inte vara sant?”\nKaffe, punschen...","Melodi: She'll be comin' round the mountain"],["Djungelpunsch","Olle Naeslund",5,0,[],"Jag gillar alla tiders punsch.\nPunsch till frukost, punsch till lunch,\nen punsch till förrätt, varmrätt och dessert.\nJag gillar punsch, för vet du vad,\nrent kaffe gör ju ingen glad.\nSå punsch för fulla muggar vill jag ha.\nMed konjak du lockar.\nDen bästa Renault.\nFörlåt om jag chockar\noch tar punsch ändå.\nOch bjuder du på fin likör\nfår du ursäkta om det stör,\nmen jag väljer hellre en Grönstedts Blå,\nen Cederlunds eller Flaggpunsch å\n– kanske har du ren Platin?\nJag gillar punsch,\nså ge mig punsch och jag är din.\nFör evigt din.","Text: Olle Naeslund | Melodi: Var nöjd med allt som livet ger"],["Kon-stig Punchvisa","Loth Ericson",5,0,[],"Vommar, vommar, vommar.\nFyra magar har en ko.\nVommar, vommar, vommar.\nHon är lycklig må ni tro.\nFör i fyra stora magar,\nryms all punsch som man behagar.\nVommar, vommar, vommar.\nMen så klok är ej en ko.\n105\nWhat shall we do with the drunken\nsailor?\nWhat shall we do with a drunken sailor? [x3]\nEarly in the morning\nHooray! And up she rises. Hooray! And up she rises.\nHooray! And up she rises.\nEarly in the morning...\nPut him in the long-boat and make him bale her. [x3]\nEarly in the morning...\nPut him in bed with the captain's daughter. [x3]\nEarly in the morning...\nPut him in the guardroom till he gets sober. [x3]\nEarly in the morning...\nDen lille mand\nMel: Värnamovisan\nDen lille mand med den røde næse\nkan hverken skrive, ej heller læse,\nmen drikke brænnvin och spele kort\nog kysse piger det kan han godt.\n108\nMolly Malone\nIn Dublin's Fair City\nWhere the girls are so pretty\nI first set my eyes on sweet Molly Malone\nAs she wheel'd her wheelbarrow\nThrough streets broad and narrow\nCrying cockles and mussels alive, alive o!\nAlive, alive o!, alive, alive o!\nCrying cockles and mussels alive, alive o!\nShe was a fishmonger\nBut sure 'twas no wonder\nFor so were her father and mother before\nAnd they each wheel'd their barrow\nThrough streets broad and narrow\nCrying cockles and mussels alive, alive o!\nAlive, alive o...\nShe died of a fever\nAnd no one could save her\nAnd that was the end of sweet Molly Malone\nBut her ghost wheels her barrow\nThrough streets broad and narrow\nCrying cockles and mussels alive, alive o!\nAlive, alive o…\n109\nThe wild rover\nI've been a wild rover for many a year\nAnd I spent all my money on whiskey and beer,\nAnd now I'm returning with gold in great store\nAnd I never will play the wild rover no more.\nAnd it's no, nay, never,\nNo nay never no more,\nWill I play the wild rover\nNo never no more.\nI went to an ale-house I used to frequent\nAnd I told the landlady my money was spent.\nI asked her for credit, she answered me \"nay\nSuch a custom as yours I could have any day.\"\nAnd it's no, nay, never…\nI took from my pocket ten sovereigns bright\nAnd the landlady's eyes opened wide with delight.\nShe said \"I have whiskey and wines of the best\nAnd the words that I spoke sure were only in jest.\"\nAnd it's no, nay, never…\n110\nI'll go home to my parents, confess what I've done\nAnd I'll ask them to pardon their prodigal son.\nAnd if they forgive me as ofttimes before\nSure I never will play the wild rover no more.\nAnd it's no, nay, never…etc\nAuld lang syne\nShould auld acquaintance be forgot,\nAnd never brought to mind?\nShould auld acquaintance be forgot,\nAnd days of auld lang syne!\nFor auld lang syne, my dear,\nFor auld lang syne.\nWe'll tak a cup o' kindness yet,\nFor auld lang syne.\nAnd there's a hand, my trusty friend,\nAnd gie's a hand o' thine!\nAnd we'll take a cup o' kindness yet\nFor auld lang syne.\n111\nTrink, Trink\nText & musik: Wilhelm Lindemann\nTrink, trink, Brüderlein, trink,\nLass doch die Sorgen zu Haus!\nTrink, trink, Brüderlein, trink,\nZieh nicht die Stirne so kraus.\n/: Meide den Kummer und meide den Schmerz,\nDann wird das Leben ein Scherz! :/\nTrink, trink...\n/: Meide die Weiber und meide das Bier,\nDann wird ein Sportsmann aus dir. :/\nTrink, trink...\n/: Kauf dir ein Auto, fahr gegen ein Baum,\nDann wird das Leben ein Traum. :/\nTrink, trink...\n/: Heirat im Sommer, Scheide in März,\nDann ist das Leben ein Scherz. :/\nDet var en go' gammel bondemand\nTraditionell dansk folkvisa\nDet var en go' gammel bondemand\nhan skulde gaa ud efter öl.\n112\nHan skulde gaa ud efter öl,\nhan skulde gaa ud efter öl,\nefter öl, efter hoppsansa, trallallala\nhan skulde gaa ud efter öl.\nTill konen kom der en ung student\nmens manden var ud efter öl.\nEtc.\nHan kyssede henne paa rosenmund\nog klapped hende paa kind.\nMens manden var ude efter öl,\nEtc.\nMen manden han stod bagved dören og saa\nhvorledes det hele gick til.\nDe troed' han var ud efter öl,\nEtc.\nSaa sköd han studenten och kaellingen med\nog saa gik han ud efter öl.\nEtc.\nOg laer her af: tag din kone med\nnår I skal gaa ud efter öl.\nEtc.","Text: Loth Ericson | Melodi: Sommar, sommar, sommar"],["Ranunculi","",8,0,[],"/: Ranunculi, ranunculi\nquam sunt ridiculi :/\n/: Non aures, non aures,\nnon caudas habent hi :/\n/: Sub aqua, sub aqua,\nsub aqua, qua, qua, qua :/\n99 bottles of beer\n99 bottles of beer on the wall, 99 bottles of beer.\nTake one down and pass it around,\n98 bottles of beer on the wall …\nDo-Re-Mi\nFrån Sound of Music\nText och melodi: Mary Martin\nDo-Re-Mi Do-Re-Mi\nThe first three notes just happen to be\nDo-Re-Mi Do-Re-Mi\n114\nDo-Re-Mi-Fa-So-La-Ti\nDo, a deer, a female deer\nRe, a drop of golden sun\nMi, a name I call myself\nFa, a long, long way to run\nSo, a needle pulling thread\nLa, a note to follow So\nTi, a drink with jam and bread\nThat will bring us back to Do, oh, oh, oh\nDo, a deer, a female deer\nRe, a drop of golden sun\nMi, a name I call myself\nFa, a long, long way to run\nSo, a needle pulling thread\nLa, a note to follow So\nTi, a drink with jam and bread\nThat will bring us back to Do\nDo-Re-Mi-Fa-So-La-Ti-Do, So-Do","Melodi: Små grodorna"],["Göteborgs nation: Silla","Arthur Engberg",9,0,[],"/: Å silla ho' går i havet\nbland fesk och makrill :/\n/: Ho' mår inte illa av 'et\nHo' tar en sup när ho' vill :/\nGästrike-Hälsinge nation: Nationssången\n/: Såg du det landet, där sjöarna le,\noch där forsens språng är en jubelsång\nuti skogens trolska drömmarsal?\nSåg du det landet, där lurarna ge\nmellan gran och tall sina återskall\nbland kullar berg och dal? :/\n/: Såg du väl detta land, som heter\nGästrikland/Hälsingland, vårt land,\ndär våra fäder bröto bygd med stark och senig hand,\ndär de som vi ha älskat bäckens sorl och brus,\ndär de som vi ha drömt i sommarnattens ljus. :/","Melodi: Flickan hon går i ringen | Text: Arthur Engberg"],["Norrlands nation: I Norrland växer det","",9,0,[],"I Norrland växer det tallar höga.\nAtt dom är höga det båtar föga,\nför en vacker dag faller dom omkull\nallt för den eviga törstens skull!\nWexiö nation: Långt ner i Småland\nLångt ner i Småland,\ndär rider själva djävulen\nmed laddade pistoler och knallande gevär,\noch alla små djävlar, dom spelar på fioler,\noch själva fader Satan, han spelar handklaver.\nHurra för Svealand,\nhurra för Götaland,\nhurra för potatisland\nsom ger oss brännevin!\nWexiö nation syftar här på Smålands nation","Melodi: Värnamovisan"],["Södermanlands-Nerikes nation:","",9,0,[],"Uschiameja\nLänge leve vår Uschiameja i människoätarnas land\nLänge leve vår Uschiameja i människoätarnas, ätarnas land\n/: Usch, usch, usch, usch, Uschiameja, Uschiameja leve! :/\nStockholms nation: Absolutist? - Nej då!\nAtt dricka lite bäsk, det skadar knappast eller hur?\nBli lite snygg, känna sig stygg,\ndet kan väl aldrig va’ farligt?\nMen ändå finns det människor\nmed en Med. Professur,\nsom tycker sprit,\nbara är skit\noch kroppsligt oförsvarligt.\nMen sådan propaganda biter\nej ett skvatt på mig.\nJag dricker bara ännu mer\noch ropar glatt – tjohej!\nTy detta är ett faktum, det är världen över känt.\nSpritkonsument,\ndrick konsekvent,\nså blir du mer potent!","Melodi: Fritiof Anderssons paradmarsch"],["Västgöta nation: Järnvägsbommar","",9,0,[],"Järnvägsbommar,\nvinter och sommar,\nsköter och passar det gör jag.\nMen förra hösten,\ndå fick jag lusten\natt fara till Vara på Barnens dag.\nHål i vägga, bora på, bôra på\nHôl i vägga, bôra på.\n...\nHôl i vägga, bôra på, bôra på\nHôl i vägga, bôra på.\nUplands nation: Åh, Uplands nation\nJag kom till sta'n i förrgår kväll\noch bor nu i en studiecell;\njag delat kök och badrum\nmed femtio till.\nDäthemma i mitt lilla tjäll\ndet är så svårt att vara säll\nså därför går jag ner på sta'n\ntill vårt eget kapell","Melodi: Champs Elysées"],["Värmlands nation: De värmländska","",9,0,[],"brukstraditioner\nDe värmländska brukstraditioner\ndem vårda vi alla minsann.\nVi har våra bruk och patroner\noch supen den tar vi iblann...\nEn värmlandspöjk han kan\nta supen som en man,\nså glupen\nden supen\ni strupen försvann.\nOch mera vill han ha,\nkan ej för möcke' ta.\nEn värmlandspöjk blir aldrig full,\nnej, han blir bare gla'!\nÖstgöta nation: Östgötacasanovan\nText och musik: Sånggruppen Men!\nSitter på min säng mitt ungkarlswum\noch förbannar min mor att jag inte föddes stum\nMin enda chans à att kunna få besked\nom att få komma till en wuixkänd logoped, för\njag kör en Porsche och lagar indisk mat\n122\nhar Amelias alla sextips i en databas\nmen inte fasen spelar det någon woll\nom man låter som ett Kolmårdstroll\nDä ä så svårt att va en Don Juan\nom man låter som ett barnprogram\noh ewotiken, ah, den kommer liksom av sig\nGu, va du ä grann, ah, låter inge bra\nnär man en kvinna med storm vill ta\noh du får inte kyssa eller smeka hennes hy\nom du låter som en Motala-wevy\nFör finnar och wyssar och Linköpingsbor\ndi har de väwe än du nånsin tror\noh de blir inge wajwaj när lampa i shläckt\nom du har en ful dialekt\nFor finnar och wyssar och linköpingsbor\ndi har de väwe än du nånsin tror\noh de blir inge wajwaj nar lampa ä shläckt\nom du har en ful dialekt, take it Klasse!\nOm du har en ful dialekt aoo\n.\n123\nVästmanlands-Dala nation: Ris-Jerk\nSå går vi till Ris-Jerk och tager oss en sup.\nDet gör så gott i magen att få ett litet rus.\n/: Ja, jag lovar liv och död,\natt på mig går ingen nöd,\nså länge det finns brännvin och\nkullor i överflöd. :/\nAv tradition sjunger Andre kuratorer i Uppsala en modifierad\nversion där ”kullor” har bytts ut mot ”pengar”\nGotlands nation: Takk för supen\nTakk för supen, sum ja fikk!\nDän gikk lustit nidar.\nSätted magen äi gutt skikk.\nkrupp u allä lidar.\nTakk för supen, dän va bra!\nFlairä släikä vill ja ha.\nGi mi äin, äin, äin!\nGi mi täu, täu, täu!\nGi mi täu, gì mi tre, gì mi föirä,\ntìi däss ja far min höirä.\nSå livum vör äi samä trou\nsum folki äi vår körkä.\nU var vör byggar, var vör bour,\n124\nså skall uss supen störkä.\nSå drikkum vör mä ett friskt mål\nallä vakkrä töisars skål.\nSkål för dän, dän, dän,\nskål för sum, sum, sum,\nskål för dän sum glassä töimar,\nu ingen drupä glåimar!\nKalmar nation i Lund: En liten tax\nEn liten tax.\nEn fin gitarr.\nEn relation.\nEn filial.\nEn fisketur i Kalmarsund\ni glada vänners lag.\nEn boll.","Melodi: Tre trallande jäntor"],["Fattig Bonddräng","Astrid Lindgren",3,0,[],"Jag är fattig bonddräng men jag lever ändå.\nDagar går och kommer medan jag knogar på,\nharvar, sår och plöjer, mockar, gräver och bär,\ngår bak mina oxar hojtar visslar och svär.\nJag är fattig bonddräng och jag tuggar mitt snus,\noch när lördan kommer vill jag ta mig ett rus.\nSen när jag blitt livad, vill jag tampas och slåss,\nvila hos en flicka vill jag också förstås.\nSen så kommer söndan och då vill våran präst,\natt jag ska i körkan men då sover jag mest.\nPrästen kan väl sova hela måndagen men\nför en fattig bonddräng börjar knoget igen.\nSå går hela veckan alla dagar och år,\njag går med min lie och jag plöjer och sår.\nJag kör mina oxar och jag hässjar mitt hö,\nharvar, gnor och trälar, och till sist ska jag dö.\nStår där, fattig bonddräng, invid himmelens port,\nlite rädd och ledsen för de synder jag gjort.\nMan ska inte supa, hålls med flickor och slåss.\nHerren Gud i himlen är väl missnöjd förstås.","Text: Astrid Lindgren | Musik: Georg Riedel"],["Kattvisan","Astrid Lindgren",3,0,[],"’Tänk jag drömde i natt\natt jag hade en katt.\nOch han åt bara sill och potäter.\nDu får trot om du vill,\nmen potäter och sill,\ndet är just vad små kattungar äter.\nTänk jag drömde i natt\natt jag hade en katt\noch han svängde på rumpari i dansen.\nDu får trot om du vill,\nmen det hör liksom till\natt små kattungar svänger på svansen.\nTänk jag drömde i natt\natt jag hade en katt.\nOj vad den kunde bitas och fräsa.\nDu får trot om du vill,\nmen just så gick det till\nnär den rackarn bet av mej min näsa.\nOppochner-visan\nOpp och ner\nner och opp\ngrisen gal i granens topp\noch en mus\n130\ni vårt hus svär och tuggar snus.\nLammet skäller,\nvärper karameller,\nhunden jamar,\nlilla grisen gal.\nOpp och ner\nner och opp\ngrisen gal i granens topp\noch vår ko,\nmå ni tro,\nhon ska ut och ro.\nGeten dansar,\ntuppen har fem svansar,\noxen kacklar,\nlilla grisen gal.\nOpp och ner\nner och opp\ngrisen gal i granens topp\noch vår katt\nhan tror att\nmyssan är en hatt.\nHönan jagar\nräv i våra hagar,\nkossan gnäggar,\nlilla grisen gal.\nOpp och ner\nner och opp\ngrisen gal i granens topp\noch vår stut\nflyger ut.\nNu är visan slut.","Text: Astrid Lindgren | Musik: Lille-Bror Söderlundh | Text: Astrid Lindgren | Musik: Georg Riedel"],["Här kommer Pippi Långstrump","Astrid Lindgren",3,0,[],"Här kommer Pippi Långstrump,\ntjolahopp tjolahej tjolahoppsan-sa,\nhär kommer Pippi Långstrump,\nja, här kommer faktiskt jag.\nHar du sett min apa,\nmin söta fina lilla apa,\nhar du sett Herr Nilsson,\nja, han heter faktiskt så.\nHar du sett min villa,\nmin Villa Villekulla-villa,\nvill å vill du veta,\nvarför villan heter så?\nJo, för där bor ju Pippi Långstrump,\ntjolahopp tjolahej tjolahoppsan-sa,\ndär bor ju Pippi Långstrump,\nja, där bor faktiskt jag.\nDet är inte illa,\njag har ju apa häst och villa,\nen kappsäck full med pengar\ndet är också bra att ha.","Text: Astrid Lindgren | Musik: Jan Johansson"],["Kom nu, alla vänner,","Astrid Lindgren",3,0,[],"varenda kotte som jag känner,\nnu ska vi leva loppan,\ntjolahej tjolahoppsan-sa.\nHär kommer Pippi Långstrump,\ntjolahopp tjolahej tjolahoppsan-sa,\nhär kommer Pippi Långstrump,\nja, här kommer faktiskt jag.\nPippis sommarvisa\nOch nu så vill jag sjunga att sommaren är skön\noch träden är så fina och marken är så grön.\nOch blommorna är vackra och höet luktar gott\noch solen är så solig och vattnet är så vått.\nOch lilla fågeln flyger i boet ut och in\noch därför vill jag sjunga att sommaren är min.\nOch jag vill också sjunga att fjärilar är bra\noch alla söta myggor dom vill jag också ha.\nOch jag är brun om bena precis som det ska va\noch därför vill jag sjunga att bruna ben är bra.\nOch jag har nya fräknar och prickigt sommarskinn\noch därför vill jag sjunga att sommaren är min.","Text: Astrid Lindgren | Musik: Georg Riedel"],["Idas Sommarvisa","Astrid Lindgren",3,0,[],"Du ska inte tro det blir sommar\nIfall inte nån sätter fart\nPå sommarn och gör lite somrigt\nDå kommer blommorna snart\nJag gör så att blommorna blommar\nJag gör hela kohagen grön\nOch nu så har sommaren kommit\nFör jag har just tagit bort snön\nJag gör mycket vatten i bäcken\nSå där så det hoppar och far\nJag gör fullt med svalor som flyger\nOch myggor som svalorna tar\nJag gör löven nya på träden\nOch små fågelbon här och där\nJag gör himlen vacker om kvällen\nFör jag gör den alldeles skär\nOch smultron det gör jag åt barnen\nFör det tycker jag dom kan få\nOch andra små roliga saker\nSom passar när barnen är små\nOch jag gör så roliga ställen\nDär barnen kan springa omkring\n134\nDå blir barnen fulla med sommar\nOch benen blir fulla med spring\ntra-la-la-la-la-la\nvill du tralla ska du tralla så, just så.\nNu ska du höra nånting som jag vill tala om,\njag såg en pojke nyss, och det var våren som kom.\nNu är våren kommen,\nnu är våren kommen,\nalla pojkar börjar vissla då, just då.\n(Vissling, vissling, vissling,\nvissling, vissling, vissling)\nVill du vissla ska du vissla så, just så.","Text: Astrid Lindgren | Musik: Georg Riedel"],["Pilutta-visan","Astrid Lindgren",3,0,[],"Madicken, Madicken, pilutta dig, pilutta dig,\njag vet nånting hemligt som bara är för mig.\nPilutta, pilutta, jag säger inte vad det ä´,\npilutta, fast du vill nog gärna veta de´,\npilutta dej, en hemlighet,\npilutta dej, som ingen, ingen vet,\noch ingen på jorden får heller veta det.\nFast det förstås, om du är snäll\noch ger mig en och annan karamell,\nså kanske, så kanske jag säger det i kväll.\nOj, vad du är barnslig, du stackars lilla Lisabeth!\nJag struntar väl blankt i din dumma hemlighet.\nDet är nånting fånigt, det slår jag mig i backen på,\noch vad det än är får jag veta det ändå.\nPilutta dej, pilutta dej,\njag vet att du berättar det för mig,\ndet kan jag slå vad om, jo för jag känner dig.\nJag vet att redan nu i kväll,\nså bubblar allting ur dig med en smäll,\ndet går ju så bra utan minsta karamell.\nDu tror det ä fånigt, men det ä tvärtom nånting bra,\noch jag fick ju veta`t av mamma i dag.\nAv mamma - vad då då? Då vill jag också veta de`,\n136\nberätta nu genast, berätta vad det ä.\nNej, vet du va`, vad mamma sa,\natt jag fick inte säga vad det va,\ndet får du ju se när det blir din fölseda`,\nmen tänk nu om du skulle få\nen sidenhatt med skära rosor på?\nMen jag säger inget, det måste du förstå.\nPilutta dig, pilutta dig\npilutta dig, pilutta dig och mig\npilutta, pilutta, pilutta dig och mig.","Text: Astrid Lindgren | Musik: Bengt Hallberg"],["Sjörövar-Fabbe","Astrid Lindgren",3,0,[],"Sjörövar-Fabbe, farfars far,\när minsann en sjusärdeles karl,\nkring alla hav han far och far,\ntjohej hadelittan lej.\nSjörövaryrket passar'n bra.\n\"Det är bara att röva och ta,\noch det\", sa Fabbe, \"gillarjag,\ntjohej hadelittan lej.\"\nMen då ...\nvad står på?\nFabbe blir plötsligt blek och grå!\nOj då!\nVad står på,\noj oj oj oj oj oj Oj!\n(Oj, oj, oj, oj, oj, oj, Oj!)\nSjörövar-Fabbe, farfars far,\när minsann en sjusärdeles karl,\nmen han är sjösjuk alla dar,\ntjohej hadelittan lej.\nStormen ryter och åskan går,\nhavet brusar och seglena slår,\nner i kajutan Fabbe går,\n138\ntjohej hadelittan lej.\nKräks och svär och mår inte bra.\n\"Bättre väder det vill jag nog ha,\nannars\", sa Fabbe, slutarjag\",\ntjohej hadelittan lej.\"\nMen då ...\nvad står på?\nFabbe blir plötsligt blek och grå!\nOj då!\nVad står på,\noj oj oj oj oj oj Oj!\n\"Dä nåt ingen mänska förstår,\nvarför alltid så illa jag mår,\nbara båten guppar och går,\ntjohej hadelittan lej.\"\nSjörövar-Fabbe, farfars far\när minsann en sjusärdeles karl,\nkring alla hav han far och far,\ntjohej hadelittan lej.","Text: Astrid Lindgren | Musik: Georg Riedel"],["Du käre lille snickerbo","Astrid Lindgren",3,0,[],"Du käre lille snickerbo'\nhär kommer jag igen.\nNu är det bråttom kan du tro,\nnu är det klippt igen.\nSnickerboa hopp fallera,\nå snickerboa hopp fallerej,\när bra att ha, hopp fallera,\nför stackers mej,\nhopp fallerej.\nTill snickerboa ränner jag\nnär det är nåt jag gjort.\nMen far min löper också bra\nfast inte lika fort.\nSnickerboa hopp fallera…\nDet får bli slut med mine hyss\nhar far min sagt ifrån.\nJag gjorde ett alldeles nyss\nsom visst tog knäcken på'n!\nSnickerboa hopp fallera…\nDu käre lille snickerbo'\nvad jag är glad åt dej!\nNu sitter jag i lugn å ro\nå bare viler mej.\nSnickerboa hopp fallera…","Text: Astrid Lindgren | Musik: Georg Riedel"],["Luffarvisan","Astrid Lindgren",3,0,[],"Se på luffarn som går där på vägen,\nse på luffarn Guds lille fyr.\nSå snart som det blir vår\ngår han ut och går\nför att söka sig äventyr.\nHan går så långt som vägarna räcker,\nhan har en oro och en längtan i sitt blod.\nOch när som sola skin\ndå far vanvett i'n,\ndet är det som ger honom hans mod.\nHan vill va fri som en fågel,\nfri som en fågel.\nOch då är det som\nnånting ropar; - Kom!,\ni hans galna luffareblod.\nHan vill va fri som en fågel,\nfri som en fågel.\nOch då är det som\nnånting ropar; - Kom!,\ni hans galna luffareblod.\n141\nRÖVARSÅNGEN\n142\nSång N:o 17 ur Bacchi Tempel\nText och musik: Carl Michael Bellman\nBort allt vad oro gör,\nbort allt vad hjärtat kväljer!\nBäst att man väljer\nbland dessa buteljer\nsin maglikör.\n/: Granne! Gör du just som jag gör,\nvet denna oljan ger humör.\nVad det var läckert!\nVad var det? Rhenskt Bläckert?\nOui Monseigneur. :/\nBort allt vad oro gör,\nallt är ju stoft och aska,\nlåt oss bli raska,\noch tömma vår flaska\nbland bröderna.\n/: Granne! Gör du just som jag gör,\nvet denna oljan ger humör.\nVad det var mäktigt!\nVad var det? ... Jo präktigt,\nMalaga - ja. :/\n145\nFredmans epistel N:o 2 Nå skruva fiolen…\nText och musik: Carl Michael Bellman\nNå skruva Fiolen, Hej! Spelman skynda dej.\nKära Syster, hej! Svara inte nej,\nsvara ”Ja”, så bli vi glada.\nSätt dig du på stolen, och stryk din silversträng;\nRöda stråken släng, och med armen sväng;\nGör ej fiolen skada.\nDu svettas, stor sak, i brännvin skall du bada;\nTy under detta tak, är Bacchi lada,\n- - - Ganska riktigt,\nDitt kall är viktigt, båd för öra, syn och smak.\nBland nymfernas skara, är du omistlig man;\nDu båd vill och kan mer än någon ann\nde unga hjärtan binda,\nOch kärlekens snara på dina strängar står;\nVarje ton du slår, du ett hjärta får,\natt konstigt sammanlinda.\nJust på en minut, små ögon bliva blinda,\nOch flickorna till slut, de bli så trinda.\n- - - Hur du bullrar!\nMen Nymphen kullrar, och du skrattar med din trut.\n146\nJag älskar de sköna, men Vinet ändå mer;\nJag på båda ser, och åt båda ler,\nmen skiljer ändå båda.\nEn nymf i det gröna, och Vin i gröna glas;\nLika gott kalas, båda om mig dras.\nGe stråken mera kåda;\nConfonium tag där uti min gröna låda;\nOch Vinet står ju här. Jag är i våda.\n- - - Supa, dricka\nOch ha sin flicka, är vad Sankte Fredman lär.\n147\nFredmans epistel N:o 9 Käraste bröder,\nsystrar och vänner\nText och musik: Carl Michael Bellman\nVers 1\nKäraste bröder, systrar och vänner,\nsi, fader Berg, han skruvar och spänner\nsträngarna på fiolen.\nOch stråken han tar i hand.\nÖgat är borta, näsan är kluven:\nSi hur han står och spottar på skruven,\nölkannan står på stolen.\nNu knäpper han lite grand,\n- - - grinar mot solen,\n- - - pinar fiolen.\n- - - han sig förvillar, drillar ibland.\nKäraste bröder, dansa på tå,\nhandskar i hand och hattarna på!\nSi på jungfru Lona\nröda band i skona,\nnya strumpor, himmelsblå!\n148\nFredmans epistel N:o 48: Solen glimmar\nblank och trind\nSolen glimmar blank och trind,\nvattnet likt en spegel;\nSmåningom uppblåser vind\ni de fallna segel;\nVimpeln sträcks, och med en år\nOlle på en höbåt står;\nKerstin ur kajutan går,\nskjuter lås och regel.\nSeglen fladdra, skutan går,\nJerker tar sin lyra.\nLyran brummar, böljan slår,\nallt med våld och yra;\nSkutan knarkar, bräcklig, gles,\nvimplens fläkt i toppen ses,\ntuppen gol så sträv och hes.\nNu slog klockan fyra.\nMovitz stöt åt dem i lurn,\nsom på skutan fara.\nOlle du vad kostar tjurn?\nLyssna vad de svara.\nHör var är ni hemma ni?\nIfrån Lovön komma vi\nmed grönsaker, silleri,\nMjölk och äpplen klara.\n149\nFredmans epistel N:o 82 Vila vid denna\nkälla\nText och musik: Carl Michael Bellman\nVers 1–2 & 4\nVila vid denna källa,\nvår lilla frukost vi framställa:\nRött vin med pimpinella\noch en nyss skjuten beckasin.\nKlang vad buteljer, Ulla!\nI våra korgar överstfulla,\ntömda i gräset rulla,\noch känn vad ångan dunstar fin.\nDitt middagsvin\nska vi ur krusen hälla,\nmed glättig min.\nVila vid denna källa,\nhör våra valthorns klang cousine.\n– – –\nValthornens klang cousine.\nPräktigt på fältet pråla,\nän hingsten med sitt sto och fåla,\nän tjurn han höres vråla,\noch stundom Lammet bräka tör;\nTuppen på taket hoppar,\nOch liksom hönan vingen loppar,\nsvalan sitt huvud doppar,\n150\noch Skatan skrattar på sin stör.\nLyft kitteln; hör.\nlåt kaffeglöden kola,\ndär nedanför.\nPräktigt på fältet pråla\nde ämnen som mest ögat rör.\n– – –\nSom mest vårt öga rör.\nVila vid denna källa,\nvår lilla frukost vi framställa:\nrött vin med pimpinella\noch en nyss skjuten beckasin.\nKlang vad buteljer, Ulla,\ni våra korgar överstfulla\ntömda i gräset rulla,\noch känn vad ångan dunstar fin!\nDitt middagsvin\nsku vi ur krusen hälla\nmed glättig min.\nVila vid denna källa,\nhör våra valthorns klang cousine.\n- - - Valthornens klang cousine.\n151\nFredmans sång N:o 10 Supa klockan över\ntolv\nText och musik: Carl Michael Bellman\nSupa klockan öfver tolf,\nLefva bland förryckta!\nJorden är mitt kammargolf,\nSolen är min lyckta!\nJag bryr mig om ingenting,\nBlott at hjernen löper kring\nLöper kring, löper kring, löper kring, löper kring,\nIntil dess hon domnar,\nOch jag fattig somnar.\nI min Farfars gamla rock,\nHål uppå armbågen,\nStår jag bland en lustig flock,\nSuper bara rågen,\nTar mig ur de vackra krus\nMorgon-, middags-, afton-rus\nAfton-rus, afton-rus, afton-rus, afton-rus,\nOch så blir jag röder\nSom de ägta bröder.\nStode salig Far min opp,\nOch mig hörde hicka,\nSade han: min gosse, topp!\n152\nVi sku brorskål dricka.\nJa min Bror, så svarte jag:\nDrick med mig til ljusan dag\nLjusan dag, ljusan dag, ljusan dag, ljusan dag,\nSedan må du ila\nÅter til din hvila.\nMen min strupe vil bli full,\nTål ej denna torken;\nGuld ej annat är än mull,\nGubbar ta ur korken;\nLåtom oss i ro och fred\nSvälja sista klunken ned,\nKlunken ned, klunken ned, klunken ned, klunken ned,\nOch oss sedan döda\nI det våta röda.\n153\nFredmans sång N:o 21 Så lunkar vi så\nsmåningom\nText och musik: Carl Michael Bellman\nVers 1, 2, 7 & 8\nSå lunka vi så småningom\nFrån Bacchi buller och tumult,\nNär döden ropar: Granne kom,\nDitt timglas är nu fullt.\nDu gubbe fäll din krycka ner,\nOch du, du yngling, lyd min lag,\nDen skönsta nymf som mot dig ler\nInunder armen tag.\nTycker du att graven är för djup?\nNå, välan, så tag dig då en sup.\nTag dig sen dito en, dito två, dito tre,\nSå dör du nöjdare.\nDu vid din remmare och press,\nRödbrusig och med hatt på sned,\nSnart skrider fram din likprocess\nI några svarta led.\nOch du som pratar där så stort,\nMed band och stjärnor på din rock,\nRe’n snickarn kistan färdig gjort,\nOch hyvlar på dess lock.\n154\nTycker du…\nMen du som till din återfärd,\nIfrån det du till bordet gick,\nEj klingat för din raska värd,\nFastän han ropar: Drick!\nDriv sådan gäst från mat och vin,\nKör honom med sitt anhang ut,\nOch sen med en ovänlig min,\nRyck remmarn ur hans trut.\nTycker du…\nSäg är du nöjd, min granne säg,\nSå prisa världen nu till slut;\nOm vi ha en och samma väg,\nSå följoms åt; drick ut.\nMen först med vinet rött och vitt\nFör vår värdinna bugom oss,\nOch halkom sen i graven fritt,\nVid aftonstjärnans bloss.\nTycker du…\n155\nFredmans sång N:o 64 Fjäriln vingad syns\npå Haga\nText och musik: Carl Michael Bellman\nVers 1 & 4\nFjäriln vingad syns på Haga,\nMellan dimmors frost och dun,\nSig sitt gröna skjul tillaga,\nOch i blomman, sin paulun;\nMinsta kräk i kärr och syra,\nNyss af Solens värma väckt,\nTil en ny högtidlig yra\nEldas vid Zephirens flägt.\nVad gudomligt lust att röna\ninom en så ljuvlig park,\ndå man hälsad av sin sköna,\nögnas av en mild monark!\nVarje blick hans öga skickar,\nlockar tacksamhetens tår;\nrörd och tjust av dessa blickar,\nsjälv den trumpne glättig går.\n156\n\nTaube\nSjösala vals\nText & musik: Evert Taube\nRönnerdahl han skuttar med ett skratt ur sin säng.\nSolen står på Orrberget. Sunnanvind brusar.\nRönnerdahl han valsar över Sjösala äng.\n- Hör min vackra visa, kom sjung min refräng!\nTärnan har fått ungar och dyker i min vik,\nur alla gröna dungar hörs finkarnas musik,\noch se, så många blommor\nsom redan slagit ut på ängen!\nGullviva, mandelblom, kattfot och blå viol.\nRönnerdahl han virvlar sina lurviga ben\nunder vita skjortan som viftar kring vaderna.\nLycklig som en lärka uti majsolens sken,\nsjunger han för ekorrn, som gungar på gren!\n- Kurre, kurre, kurre! Nu dansar Rönnerdahl!\nKoko! Och göken ropar uti hans gröna dal\noch se, så många blommor\nsom redan slagit ut på ängen!\nGullviva, mandelblom, kattfot och blå viol.\nRönnerdahl han binder utav blommor en krans,\nbinder den kring håret, det gråa och rufsiga,\nvalsar in i stugan och har lutan till hands,\nväcker frun och barnen med drill och kadans.\n160\n- Titta! ropar ungarna, pappa är en brud,\nmed blomsterkrans i håret och nattskjortan till skrud!\nOch se, så många blommor\nsom redan slagit ut på ängen!\nGullviva, mandelblom, kattfot och blå viol.\nRönnerdahl är gammal, men han valsar ändå!\nRönnerdahl har sorger och ont om sekiner.\nSällan får han rasta – han får slita för två.\nHur han klarar skivan kan ingen förstå -\ningen, utom tärnan i viken (hon som dök)\noch ekorren och finken och vårens första gök\noch blommorna, de blommor\nsom redan slagit ut på ängen.\nGullviva, mandelblom, kattfot och blå viol.\n161\nFritiof och Carmencita\nText & musik: Evert Taube\nSamborombon, en liten by förutan gata,\nden ligger inte långt från Rio de la Plata,\nnästan i kanten\nav den blåa Atlanten,\noch med Pampas bakom sig\nmånga hundra gröna mil,\ndit kom jag ridande en afton i april\nför jag ville dansa tango.\nDragspel, fiol och mandolin\nhördes från krogen och i salen steg jag in,\ndär på bänken i mantilj\noch med en ros vid sin barm\nsatt den bedårande lilla Carmencita.\nMamman, värdinnan satt i vrån,\nhon tog mitt ridspö,\nmin pistol och min manton.\nJag bjöd upp och Carmencita sa:\n- Si gracias, senor,\nVámos á bailár, este tango!\n- Carmencita, lilla vän,\nhåller du utav mig än?\nFår jag tala med din pappa och din mamma,\njag vill gifta mig med dig, Carmencita!\n- Nej, Don Fritiof Andersson,\n162\nkom ej till Samborombon,\nom ni hyser andra planer när det gäller mig,\nän att dansa tango!\n- Ack, Carmencita, gör mig inte så besviken,\njag tänkte skaffa mig ett jobb här i butiken,\nsköta mig noga, bara spara och knoga,\ninte spela och dricka men bara älska dig.\nSäg Carmencita, är det ändå blott med mig,\nsäg som du vill dansa tango.\n- Nej, Fritiof, ni förstår musik,\nmen jag tror inte ni kan stå i en butik\noch förresten sa min pappa\njust idag att han visste\nvem som snart skulle fria till hans dotter.\nEn som har tjugotusen kor\noch en estancia som är förfärligt stor.\nHan har prisbelönta tjurar,\nhan har oxar, får och svin,\noch han dansar underbar tango.\n- Carmencita, lilla vän,\nakta dig för rika män!\nLyckan den bor ej i oxar eller kor,\noch den kan heller inte köpas för pengar.\nMen min kärlek gör dig rik,\nskaffa mig ett jobb i er butik!\nOch när vi blir gifta söta ungar ska du få,\nsom kan dansa tango.\n163\nFritiof Anderssons paradmarsch\nText & musik: Evert Taube\nHär kommer Fritiof Andersson, det snöar på hans hatt,\nhan går med spel, han går med sång!\nHej, mina lustiga bröder!\nDet knarrar under klackarna, det är en vinternatt.\nHej, om du vill,\nsäg bara till,\nså går vi hem till Söder!\nO, bugen er i bylingar i bucklor och batong\noch ställen er på sidorna, för gränden den är trång!\nDär går en här som frös och svalt men segrade ändå,\nden går med sång, den går med spel\ntill Spanien och Bordeaux.\nDär går en här, där går en hop, en liten, men en god,\nden går i ur, den går i skur!\nHej, mina lustiga bröder!\nDen kräver vin och kyssar och den kräver drakars blod!\nHej, om du vill,\nsäg bara till,\nså går vi hem till Söder!\nO, bugen er i borgare i Birka och Borås\noch ställ er här på sidorna. Trumpet och valthorn, blås!\nDär går en här som frös och svalt men segrade ändå,\nden går med sång, den går med spel\n164\ntill Spanien och Bordeaux.\nPå vägarna vi vandra och på böljorna vi gå,\nvi gå med spel, vi gå med sång!\nHej, mina lustiga bröder!\nI alla sorter väder som Vår Herre hittar på!\nHej, om du vill,\nsäg bara till,\nså går vi hem till Söder!\nO, buga dig du brisande Biscaya där vi gå!\nVårt skepp är själva Friheten, besättningen är blå!\nDen seglade och frös och svalt men segrade ändå,\nden går med sång, den går med spel\ntill Spanien och Bordeaux.\n165\nÄnglamark\nText & musik: Evert Taube\nKalla den änglamarken\neller himlajorden om du vill,\njorden vi ärvde och lunden den gröna,\nvildrosor och blåsippor\noch lindblommor och kamomill,\nlåt dem få leva, de är ju så sköna!\nLåt barnen dansa som änglar kring lönn och alm,\nleka tittut mellan blommande grenar,\nlåt fåglar leva och sjunga för oss sin psalm,\nlåt fiskar simma kring bryggor och stenar!\nSluta att utrota skogarnas alla djur,\nlåt örnen flyga, låt rådjuren löpa!\nLåt sista älven som brusar i vår natur\nbrusa alltjämt mellan älvar och gran och fur.\nKalla den änglamarken\neller himlajorden om du vill,\njorden vi ärvde och lunden den gröna,\nvildrosor och blåsippor\noch lindblommor och kamomill\n166\n\nIndex\n99 bottles of beer ………………………………………. 114\n1600-talet ……………………………………………….. 83\nA\nAuld lang syne …………………………………………. 111\nB\nBalladen om den kaxiga myran …………………………. 72\nBiskop Franzéns bordsvisa ……………………………… 80\nBlå och vit ………………………………………………. 44\nBordeaux, Bordeaux ……………………………………. 60\nBort allt vad OD gör ……………………………………. 78\nC\nCalmarevisan ……………………………………………. 24\nCrambamboli ……………………………………………. 62\nD\nDe brevitate vitae ………………………………………. 18\nDen lille mand …………………………………………. 108\nDet var i vår ungdoms fagraste vår ……………………… 11\nDet var en go' gammel bondemand ……………………. 112\nDjungelpunsch …………………………………………. 104\nDom som är nyktra ……………………………………… 48\nDo-Re-Mi ………………………………………………. 114\nDu käre lille snickerbo …………………………………. 140\nE\nEn kalmarit ………………………………………………. 68\nEn liten sup nu kommer …………………………………. 38\nEn Pilsnerdrickare ……………………………………….. 93\nF\nFattig Bonddräng ………………………………………..128\nFesten kan börja …………………………………………. 42\nFeta fransyskor ………………………………………….. 62\nFinland är Finland ……………………………………….. 43\nFredmans epistel N:o 2 ………………………………… 146\nFredmans epistel N:o 9 ………………………………… 148\nFredmans epistel N:o 48 ………………………………. 149\nFredmans epistel N:o 82 ………………………………. 150\nFredmans sång N:o 10 …………………………………. 152\nFredmans sång N:o 21 …………………………………. 154\nFredmans sång N:o 64 …………………………………. 156\nFritiof Anderssons paradmarsch ………………………. 164\nFritiof och Carmencita …………………………………. 162\nFru Svensången …………………………………………. 76\nG\nGamla punschvisan …………………………………….. 102\nGlad liksom fågeln ………………………………………. 89\nGotlands nation: Astu dass …………………………….. 124\nGroggens mening …………………………………………61\nGudarnas dryckesvisa …………………………………… 99\nGäddan hon slår …………………………………………. 41\nGästrike-Hälsinge nation: Nationssången ………………118\nGöteborgs nation: Silla ………………………………… 118\nH\nHej tomtegubbar ………………………………………… 40\nHelan går ………………………………………………... 34\nHelan rasat ………………………………………………. 35\nHell and Gore …………………………………………… 34\nHultsfredsvisan ………………………………………………. 30\nHyfsvisan ………………………………………………... 37\nHär är gudagott att vara …………………………………. 97\nHärjarevisan …………………………………………….. 88\nI\nIdas fyllevisa ……………………………………………. 45\nIdas Sommarvisa ………………………………………. 134\nImbelupet ……………………………………………….. 52\nImsig vimsig blir man …………………………………. 98\nInfanteriet ………………………………………………. 41\nJ\nJag har aldrig var’t på snusen …………………………… 51\nJag såg mamma stycka tomten …………………………. 78\nK\nKaffevisan ……………………………………………… 103\nKalmar nation i Lund: En liten tax ……………………. 125\nKalmariten ………………………………………………. 54\nKattvisan ……………………………………………….. 130\nKon-stig Punchvisa …………………………………….. 105\nKroppkakans lov ………………………………………. 30\nKroppkakeberget ………………………………………. 91\nL\nLivet är härligt ………………………………………….. 37\nLuffarvisan ……………………………………………. 141\nLämner Gemaken ………………………………………. 87\nLängtan till landet ………………………………………. 16\nM\nMer öl ……………………………………………………. 76\nMera brännvin …………………………………………… 35\nMinnet …………………………………………………... 42\nMitt lilla lån ……………………………………………... 39\nMolly malone ………………………………………...... 109\nMors lilla Olle …………………………………………... 37\nMånen …………………………………………………... 39\nMåsen …………………………………………………… 47\nN\nNorge ……………………………………………………. 88\nNorrlands nation: I Norrland växer det ………………... 119\nNu grönskar det …………………………………………. 17\nNu har vi ljus …………………………………………… 61\nNudist under fracken …………………………………… 64\nNär jag är fuller …………………………………………. 86\nO\nO gamla klang- och jubeltid! ……………………………. 20\nO jävla natt …………………………………………….... 79\nOde till ölet ……………………………………………… 71\nOfvandahls ………………………………………………. 82\nOm cykling ……………………………………………… 53\nOm jag hade brännvin …………………………………. 46\nOppochner-visan ………………………………………. 130\nP\nPiggorask ………………………………………………. 41\nPilutta-visan ……………………………………………. 136\nPippis sommarvisa ……………………………………... 133\nPunsch filibom …………………………………………. 102\nPå en liten smutsig bakgård ……………………………. 95\nPå GH nation …………………………………………… 64\nR\nRanunculi ………………………………………………. 114\nRecentiorens klagan ……………………………….......... 81\nRöda havet ……………………………………………… 48\nRövarsången …………………………………………… 142\nS\nSjörövar-Fabbe ………………………………………… 138\nSjösala vals ……………………………………………. 160\nSmedsvisan ……………………………………………… 58\nSnålskål ………………………………………………….. 60\nSommarpsalm …………………………………………… 15\nSpritbolaget ……………………………………………... 44\nStadigt rus ……………………………………………….. 84\nStockholms nation: Absolutist? - Nej då! ……………… 120\nStridssång …………………………………………………11\nStudentsången …………………………………………… 13\nSvepskäl ………………………………………………… 45\nSveriges flagga …………………………………………. 14\nSvinnsta skär ……………………………………………. 90\nSång N:o 17 ur Bacchi Tempel ………………………… 145\nSödermanlands-Nerikes nation: Uschiameja ……………120\nT\nTa ett glas ………………………………………………. 59\nTelefonen ………………………………………………. 67\nThe wild rover ………………………………………….. 110\nTreo Comp ………………………………………………. 79\nTrink, Trink …………………………………………….. 112\nTräspritens lov ………………………………………….. 36\nTårtan ……………………………………………………. 59\nTänk om jag hade lilla nubben ………………………….. 40\nU\nUplands nation: Å Uplands nation ……………………... 121\nUti vår hage ……………………………………………… 98\nUti vår mage ……………………………………………. 43\nV\nVadsbro Skvadrons Visa ………………………………... 85\nVar min Åbro …………………………………………… 36\nVar nöjd med ölen ………………………………………. 71\nVargen ………………………………………………….. 46\nVarm Korv Boogie ……………………………………… 96\nVi gå över daggstänkta berg …………………………….. 75\nVid Färjestaden …………………………………………. 26\nVikingen ………………………………………………... 53\nVisa vid vindens ängar ………………………………….. 94\nVår på Saltkråkan ……………………………………… 129\nVårvindar friska …………………………………………. 66\nVärmlands nation: De värmländska brukstraditioner ….. 122\nVästgöta nation: Järnvägsbommar ……………………... 121\nVästmanlands-Dala nation: Ris-Jerk ……………………124\nW\nWexiö nation: Långt ner i Småland ……………………. 119\nWhat shall we do with the drunken sailor? …………….. 108\nÄ\nÄn en gång däran ………………………………………... 50\nÄnglamark ……………………………………………... 166\nÖ\nÖlandsbron …………………………………………....... 28\nÖlandssången …………………………………………… 29\nÖstgöta nation: Östgötasången ………………………... 122","Text: Astrid Lindgren | Musik: Gösta Linderholm"],["Flickorna i Småland","",2,1,["folkvisor","småland"],"På lingonröda tuvor och på villande mo\ndär furuskogen susar sussilull och sussiulo\nDär kan du se dem en och en\noch stundom två och två\npå lingonröda tuvor komma dansande på tå\n\nDet är flickorna i Småland,\ndet är flickorna från mon.\nDet är flickorna som vallmoblom och\nlilja och pion.\nJa, det är flickorna i Småland\nsussilull och sussilo,\nsom går vallande och trallande\npå vilande mo\n\nOch går du ut på vägarna,\ndu gångande sven,\nja, går du ut i världen\nför att söka dig en vän,\noch frågar du och spörjer, sussilull och sussilo,\nvar månn' i hela världen de bästa flickor bo\n\nDet är flickorna i Småland...\n\nOch vänder du dig spörjande\nåt få den gåtan löst\noch vänder du dig spörjande\nmot väster och mot öst,\ndå skall du höra vindens sussilull och sussilo\ndig svara var i världen de bästa flickor bo.\n\nDet är flickorna i Småland..."],["Blå och Vit","",2,1,["kalmar","nation"],"Innan jag blev kalmarit\nVar världen svart och vit,\nOch allting verkade vara ganska skit\n\nMen sen kom jag hit,\nOch smaka denna sprit\nOch nu har allting färg\nNär jag blitt kalmarit"],["En get av smör","",4,1,["parodi","jul"],"Jag kan visa dig mjölk\nFetthalt, skummande, kära\nMen om du skulle tjärna\nFår du något gjort av guld\n\nJag kan karva med dig\nSkapa ett vackert alster\nStälla det på vårt julbord\nDen står stolt så alla ser\n\nEn get av smöööör\nEn julgestalt av margarin\nDen kan ej brännas ner\nMen smälta snabbt\nI djupet av din mun\n\nEn get av smöööör (släng fan inte bort)\nEn julgestalt av margarin\nPå ett vörtbröd ditt\nEn liten klick\nAllt glider in så fin","Melodi: En helt ny värld"],["Avlatsbrevet","",4,1,["parodi","snapsvisor"],"Till söndagsbönen färdas jag och står vid kyrkans port\nJag vill betala avlatsbrev och bli benådad fort\nFadern sade, \"inte mitt barn,\nför jag har blivit lutheran\"\nBehåll din peng du lille dräng,\nOch läs guds bok istället sen.\n\nNej detta var ju inte bra, jag är analfabet,\nOch plötsligt har jag pengar kvar, men vad gör väll det?\nMånga flaskor togs till gemak,\nMen utanför ett äktenskap.\nFader skäms nog om han ser.\nNu ska jag sluta synda mer.","Melodi: Snickerboa"],["Ostkakans lov","",4,1,["parodi","ostkaka","mat"],"Sätt nu fram i Gillesalen\nav en gul och gräddad färg,\nformen ljuvligt söt och malen,\nuppå faten hela berg!\nBlott ostkaka vill jag smaka,\nnöjd och glad till sista stund,\n/: När mot mig de Gouda Feta\nLe som gästerna från Lund :/\n\nUnder Smålands sol måhända\ngrädden tjocknar än en gång;\nvart vi oss i världen vända\nfinns ej kaka sån och lång!\nNordbon gnager Parmesanen,\ndansken drömmer Danablå,\n/: Men ostkakan mig dock tjusar,\nfår min själ att smälta på. :/\n\nI min ungdoms fröjd och gamman,\nsom i ålderns fina mejeri,\ndenna kaka band mig samman,\nmed så mången kalmarit.\nDärför när vi Småland nalkas\nsamlas vi för ostig smak.\n/: Bröder, låt oss ljuvligt svalkas\nav den ädla ostkaksmat! :/","Melodi: Rhenvinets lov"],["Inte nog av Ostkaka","",4,1,["parodi","ostkaka","mat"],"För jag kan inte få nog av ostkaka,\nalla sätt jag smakat på var gott.\nNär man väl vill lyxa,\ntar man fram sin sked,\nFrödinges tack, på bordet den satt, nej ingen kaka sitter fel!\n\nFör jag kan inte få nog av ostkaka,\nnej inte fast jag ätit som ett svin.\nVarje gång jag smakar,\nkänner jag mig rar,\nDet är bara ostkakan som är sig lik!\n\nJa, det är bara ostkakan som är sig liiiik!\nAllt det andra smakar bara mer fabrik!\nSäg mig minns du Wexiö stad?\nGlöm bort det är du rar,\nför det är bara ostkakan som är sig lik!\n\nFör jag kan inte få nog av ostkaka\nFast jag försökt att spara'n till imorr'n,\nTy hur jag än gömde,\nden bakom lite mjöl,\nså fann jag den sen — och la grädde på den, ja ingen kaka finns nu mer!\n\nFör jag kan inte få nog av ostkaka,\nnej jag behärskar ej min aptit-teknik!\nVårt lilla kök om du ser,\ndet står där knappt nå mer,\nför det är bara ostkakan som är sig lik!\n\nFör jag kan inte få nog av ostkaka,\nnej trots att jag fått magknip av min flit.\nNu om jag kaka ser,\nså känns det rätt så fel,\nför det är bara ostkakan som är sig lik!\n\nJa, det är bara ostkakan som är sig liiiik!\nAll ostkaka har fått mig att må skit.\nTill toakön härnäst,\nden längsta som man sett,\nför det är bara ostkakan som är sig lik!","Melodi: Far, jag kan inte få upp min kokosnöt"],["Sång till ostkakan","",4,1,["parodi","ostkaka"],"Du goda du gula du smarriga rätt\nSom sprungit ur Smålands djupa skogar\nVi Frödinge tackar för allt de gjort för oss\nFör all inspiration och all ostkaka!\nFör att vi får av ostkakan nu smaka!\n\nVi glömmer ej heller allt det som hör till\nVi sjunger för goda tillbehöret\nFör grädden och sylten och all ost som hör den till.\nFör det är hela helheten som gör'et\nSå ge mig nu ett lass med hela köret!","Melodi: Du gamla Du fria"],["Å ostkaka","",4,1,["parodi","ostkaka"],"Å ostkakor\nÅ ostkakor\nDet är vad vi vill se\nVi vill äta dem,\nFörtära dem\nOch ätas det skall de\nÅ ostkakor\nÅ ostkakor\nVad roligt att få ses\nSnart kommer refrängen\nSå sjung så du blir hes\n\nÅ ostkaka, å ostkaka, å ostka-ka-ka\nÅ ostkaka, å ostkaka, å ostka-ka-ka","Melodi: Små grodorna"],["Osten smakar","",4,1,["parodi","ost"],"Osten smakar fint i våra salar,\nGouda skivor passar bra det med.\nBrie´n mild ner i våra magar,\noch Camembert ger ett mjukt franskt besked.\n\nSnart är ostens tid, när löpen stelnar,\nmjölkens fett blir ostmassans poesi.\nLagrad Grevé i runda källarvalven,\nmognar nötigt – söt av harmoni.","Melodi: Vintern rastat"],["Cheese in a bottle","",4,1,["parodi","engelska","ost"],"If I could save cheese in a bottle,\nThe first thing that I'd like to do,\nIs to savor each bite,\n'Til my ability to taste 'gone away,\nJust to share cheese with you.\n\nIf I could make Brie last forever,\nIf Gouda could make wishes come true,\nI'd age every wheel\nlike a treasure and then,\nAgain, I would share cheese with you.\n\nBut there never seems to be enough time,\nTo taste all the cheeses we want to do,\nOnce you find them,\nI've aged enough wheels to know\nThat you're the one I want to go\nThrough cheese with.\n\nIf I had a box just for cheeses,\nAnd wheels that were aged to perfection,\nThe box would be empty,\nExcept for the memory of how,\nI shared cheese with you.","Melody: Time in a bottle"],["Möbelsnickarens Snapsvisa","Ola Ljunggren Bergeå",4,1,["snapsvisor","parodi"],"När folk ska fästa ett tyg på stolen\ntar de fram tejpen och häftpistolen\nMen jag har lärt vad som funkar bäst:\nJag slår i nubben, då blir det fäst!","Melodi: Apladalen i Värnamo"],["Mer öl (omskriven)","",4,1,["parodi","kalmar","klubbverk"],"Jag är en klubbverk person med takt och ton\nMåttfull och balanserad\nJag är tyst och still och det ska mycket till\nInnan jag blir exalterad\n\nMen jag har en last som håller mig fast\nI ett järngrepp varje klubbsläpp\nVid kvällens slut när ölen åkt ut\nOch städet är sista slitet jag vill ha\n\nMer öl, ge mig\nMer öl, jag vill ha\nMer öl, ge mig\nMer öl\n\nVakter som inte tjafsar\nBob hund på Kalmar live\nKablar som inte trasslar\nVill jag ha mer\n\nMer folk på klubb som bara dyker opp\nKrävs fler nödutgångar snarast\nSå ge mig tretti grader kallt, köer överallt\nTill dansgolvet de då spanar\n\nJag vill ha takterrass, korv i stora lass\nToaletter som fungerar\nLive och band som ackompangemang\nPå alla Kalmars kvällar, jag vill ha\n\nMer öl, ge mig…\n\nGe mig ännu en chans, ge mig ännu mera dans\nGe mig glowsticks som håller länge\nGe mig bayerskt öl i hela Kalmar Sund\nOch mera vin på sexor\n\nGe mig mera snaps och mera köttfärs\nSom har tinat ifrån frysen\nExtrema evenemang, längre långdans\nOch till sist en stad i ljusen, jag vill ha\n\nMer öl, ge mig…","Melodi: Mer jul"]]};
+
+// ── VERSION ──────────────────────────────────────────────────────────────────
+// Bump APP_VERSION whenever seed songs/books change. On mismatch the app
+// discards stale cached data but preserves user songs, user books, favs, tags.
+const APP_VERSION = '2';
+
+// ── SEED DATA (never written to localStorage) ────────────────────────────────
+// Compact indexed format: { cats:[], bids:[], songs:[[t,a,ci,bi,tags?,l,m?],...] }
+// ci = index into cats, bi = index into bids; trailing empty fields stripped.
+const SEED_BOOKS = [
+  {id:'kalmar2023', name:'Kalmar Nations Sångbok', year:'2023', desc:'', color:'#7b61ff'},
+  {id:'kalmar_extra', name:'Kalmar Extra',          year:'2024', desc:'Omskrivna texter & mer', color:'#ff3c6e'},
+];
+
+function unpackSeed(payload) {
+  const {cats, bids, songs} = payload;
+  return songs.map((r, i) => {
+    const hasTags = Array.isArray(r[4]);
+    return {
+      id:       'seed_' + i,
+      title:    r[0] || '',
+      artist:   r[1] || '',
+      category: cats[r[2]],
+      bookId:   bids[r[3]],
+      tags:     hasTags ? r[4] : [],
+      lyrics:   hasTags ? (r[5] || '') : (r[4] || ''),
+      meta_str: hasTags ? (r[6] || '') : (r[5] || ''),
+      _seed:    true,   // flag: don't persist to localStorage
+    };
+  });
+}
+
+const SEED_SONGS = unpackSeed(SEED_PAYLOAD);
+
+// ── USER SONG COMPACT FORMAT ─────────────────────────────────────────────────
+// User songs stored as: [id, title, artist, category, bookId, tags, lyrics, meta]
+// id is always present; trailing empty fields stripped.
+function packUserSong(s) {
+  const row = [s.id, s.title, s.artist||'', s.category, s.bookId, s.tags||[], s.lyrics, s.meta_str||''];
+  while (row.length > 2 && (row[row.length-1] === '' || (Array.isArray(row[row.length-1]) && !row[row.length-1].length))) row.pop();
+  return row;
+}
+function unpackUserSong(r) {
+  const hasTags = Array.isArray(r[5]);
+  return {
+    id:       r[0],
+    title:    r[1] || '',
+    artist:   r[2] || '',
+    category: r[3] || '',
+    bookId:   r[4] || '',
+    tags:     hasTags ? r[5] : [],
+    lyrics:   hasTags ? (r[6] || '') : (r[5] || ''),
+    meta_str: hasTags ? (r[7] || '') : (r[6] || ''),
+    _seed:    false,
+  };
+}
+
+// ── STORAGE HELPERS ──────────────────────────────────────────────────────────
+const LS = {
+  get: (k, def) => { try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : def; } catch { return def; } },
+  set: (k, v)   => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e) { toast('Storage full!', true); } },
+  del: (k)      => { try { localStorage.removeItem(k); } catch {} },
+};
+
+function lsSize() {
+  let n = 0;
+  try { for (let k in localStorage) { if (localStorage.hasOwnProperty(k)) n += (localStorage[k].length + k.length) * 2; } } catch {}
+  return n;
+}
+
+function updateStorBadge() {
+  const bytes = lsSize();
+  const kb = (bytes / 1024).toFixed(1);
+  const pct = Math.min(100, bytes / (5 * 1024 * 1024) * 100);
+  document.getElementById('storTxt').textContent = kb + ' KB';
+  document.getElementById('storFill').style.width = pct + '%';
+  document.getElementById('storFill').style.background = pct > 80 ? 'var(--a1)' : pct > 50 ? 'var(--a4)' : 'var(--a2)';
+}
+
+// ── VERSION CHECK & MIGRATION ────────────────────────────────────────────────
+function checkVersion() {
+  const stored = LS.get('lv_v', null);
+  if (stored === APP_VERSION) return;            // up to date
+
+  if (stored !== null) {
+    // Stale version: keep user data, discard anything that depends on seed ids
+    // Favs/recent reference seed ids which may have changed index → clear them
+    LS.del('lv_favs');
+    LS.del('lv_recent');
+    // User songs and user books survive unchanged
+    toast('✨ Library updated! Your songs and books are preserved.', false, 3500);
+  }
+  LS.set('lv_v', APP_VERSION);
+}
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+checkVersion();
+
+// User songs stored compactly, unpacked at runtime
+const USER_SONG_ROWS = LS.get('lv_user_songs', []);
+let userSongs = USER_SONG_ROWS.map(unpackUserSong);
+
+// User books (user-created only; seed books come from SEED_BOOKS)
+let userBooks = LS.get('lv_user_books', []);
+
+// Mutable user state — small, always persisted
+let favs   = LS.get('lv_favs',   []);
+let recent = LS.get('lv_recent', []);
+let dark   = LS.get('lv_theme',  'dark') !== 'light';
+
+// Runtime: merged view (seed + user, never re-serialised as a whole)
+let allSongs = [...SEED_SONGS, ...userSongs];
+let allBooks = [...SEED_BOOKS, ...userBooks];
+
+// UI state
+let curCat = 'all', curTag = null, curBook = null, curSongId = null, pendTags = [];
+
+const BOOK_COLORS = ['#ff3c6e','#7b61ff','#00e5b0','#ffb830','#00c8ff','#ff8c42','#a8ff3e','#ff61b0'];
+const CAT_COLORS  = {
+  'Dryckesvisor':'#ffb830','Högtidligt':'#ff3c6e','Kalmar & Tradition':'#00c8ff',
+  'Lindgren':'#ff61b0','Omskrivna Texter':'#a8ff3e','Punschen':'#00c8ff',
+  'Snapsvisor':'#7b61ff','Ut i Calmare län':'#00e5b0','Utrikes':'#ff8c42',
+  'Våra vänner':'#a8ff3e','Worship':'#ff3c6e','Gospel':'#7b61ff',
+  'Hymn':'#ffb830','Christmas':'#00e5b0',
+};
+
+// ── PERSIST HELPERS ──────────────────────────────────────────────────────────
+function saveUserSongs() {
+  LS.set('lv_user_songs', userSongs.map(packUserSong));
+  updateStorBadge();
+}
+function saveUserBooks() {
+  LS.set('lv_user_books', userBooks);
+  updateStorBadge();
+}
+function saveFavs()   { LS.set('lv_favs',   favs);   updateStorBadge(); }
+function saveRecent() { LS.set('lv_recent', recent); updateStorBadge(); }
+
+// ── THEME ────────────────────────────────────────────────────────────────────
+if (!dark) document.body.classList.add('light');
+function toggleTheme() {
+  dark = !dark;
+  document.body.classList.toggle('light', !dark);
+  LS.set('lv_theme', dark ? 'dark' : 'light');
+  document.getElementById('themeBtn').textContent = dark ? '🌙' : '☀️';
+}
+if (!dark) document.getElementById('themeBtn').textContent = '☀️';
+
+// ── UTILS ────────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function catColor(c)  { return CAT_COLORS[c] || '#888'; }
+function bookColor(id){ const b = allBooks.find(x => x.id === id); return b ? b.color : '#7b61ff'; }
+
+function toast(msg, warn, dur) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (warn ? ' warn' : '');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), dur || 2600);
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+function render() { renderSidebar(); renderBooksShelf(); renderRecent(); renderGrid(); renderTagFilters(); updateStorBadge(); }
+
+function getSongsForBook(bid) { return allSongs.filter(s => s.bookId === bid); }
+
+function renderSidebar() {
+  document.getElementById('bAll').textContent = allSongs.length;
+  document.getElementById('bFav').textContent = favs.length;
+  const bl = document.getElementById('booksList');
+  bl.innerHTML = allBooks.map(b => {
+    const bsongs = getSongsForBook(b.id);
+    const cats = {};
+    bsongs.forEach(s => { cats[s.category] = (cats[s.category]||0) + 1; });
+    const isOpen = curBook === b.id;
+    const allActive = curCat === 'book_' + b.id && curBook === b.id ? ' active' : '';
+    const catsHtml = Object.entries(cats).map(([cat, cnt]) => {
+      const a = curCat === cat && curBook === b.id ? ' active' : '';
+      return '<div class="sbi' + a + '" onclick="filterBookCat(\'' + b.id + '\',\'' + cat.replace(/\\/g,'\\\\').replace(/'/g,"\\'") + '\',this)">' +
+        '<span class="cdot" style="background:' + catColor(cat) + '"></span>' + esc(cat) +
+        '<span class="sb-badge">' + cnt + '</span></div>';
+    }).join('');
+    return '<div>' +
+      '<div class="bk-hdr' + (isOpen?' open':'') + '" onclick="toggleBookSb(\'' + b.id + '\',this)">' +
+        '<span class="bk-arrow">▶</span><span style="font-size:1rem">📚</span>' +
+        '<span style="flex:1;font-size:.875rem;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(b.name) + '</span>' +
+        '<span class="sb-badge">' + bsongs.length + '</span>' +
+      '</div>' +
+      '<div class="bk-cats' + (isOpen?' open':'') + '" id="bcats-' + b.id + '">' +
+        '<div class="sbi' + allActive + '" onclick="selectBook(\'' + b.id + '\')">' +
+          '<span style="font-size:.85rem">📖</span> All in book</div>' +
+        catsHtml +
+      '</div></div>';
+  }).join('');
+}
+
+function toggleBookSb(bid, el) {
+  const el2 = document.getElementById('bcats-' + bid);
+  const open = el2.classList.toggle('open');
+  el.classList.toggle('open', open);
+}
+function selectBook(bid) {
+  curBook = bid; curCat = 'book_' + bid; curTag = null;
+  document.querySelectorAll('.sbi').forEach(i => i.classList.remove('active'));
+  render();
+}
+function filterBookCat(bid, cat, el) {
+  curBook = bid; curCat = cat; curTag = null;
+  document.querySelectorAll('.sbi').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  renderGrid(); renderTagFilters();
+}
+function filterCat(cat, el) {
+  curCat = cat; curBook = null; curTag = null;
+  document.querySelectorAll('.sbi').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  renderGrid(); renderSidebar(); renderTagFilters();
+}
+function filterTag(tag) {
+  curTag = curTag === tag ? null : tag;
+  renderGrid(); renderTagFilters();
+}
+
+function renderBooksShelf() {
+  const row = document.getElementById('bksRow');
+  row.innerHTML = allBooks.map(b => {
+    const cnt = getSongsForBook(b.id).length;
+    const sel = curBook === b.id ? ' sel' : '';
+    const yr  = b.year ? '<div class="bk-yr">' + esc(b.year) + '</div>' : '';
+    return '<div class="bk-card' + sel + '" onclick="selectBook(\'' + b.id + '\')">' +
+      '<div class="bk-spine" style="background:linear-gradient(90deg,' + b.color + ',' + b.color + '88)"></div>' +
+      '<div class="bk-body"><div class="bk-name">' + esc(b.name) + '</div>' +
+      '<div class="bk-cnt">' + cnt + ' songs</div>' + yr + '</div></div>';
+  }).join('');
+}
+
+function renderRecent() {
+  const sec = document.getElementById('recSec');
+  const strip = document.getElementById('recStrip');
+  const items = recent.map(id => allSongs.find(s => s.id === id)).filter(Boolean).slice(0,8);
+  if (!items.length) { sec.style.display = 'none'; return; }
+  sec.style.display = '';
+  strip.innerHTML = items.map(s => {
+    const c = catColor(s.category);
+    return '<div class="rc" onclick="openSong(\'' + s.id + '\')" style="background:linear-gradient(135deg,' + c + '20,' + c + '35);border:1.5px solid ' + c + '44;">' +
+      '<div class="rc-t" style="color:' + c + '">' + esc(s.title) + '</div>' +
+      '<div class="rc-a">' + esc(s.artist || '—') + '</div>' +
+      '<div class="rc-c" style="color:' + c + '">' + esc(s.category) + '</div></div>';
+  }).join('');
+}
+
+function getFilterBase() {
+  if (curCat === 'favorites') return allSongs.filter(s => favs.includes(s.id));
+  if (curBook && curCat === 'book_' + curBook) return allSongs.filter(s => s.bookId === curBook);
+  if (curBook) return allSongs.filter(s => s.bookId === curBook && s.category === curCat);
+  if (curCat === 'all') return allSongs;
+  return allSongs.filter(s => s.category === curCat);
+}
+function getFiltered() {
+  let list = getFilterBase();
+  if (curTag) list = list.filter(s => (s.tags||[]).includes(curTag));
+  const q = document.getElementById('srchIn').value.toLowerCase().trim();
+  if (q) list = list.filter(s =>
+    s.title.toLowerCase().includes(q) ||
+    (s.artist||'').toLowerCase().includes(q) ||
+    s.lyrics.toLowerCase().includes(q) ||
+    (s.tags||[]).some(t => t.toLowerCase().includes(q))
+  );
+  return list;
+}
+function getAllTags() {
+  const src = getFilterBase(), tags = new Set();
+  src.forEach(s => (s.tags||[]).forEach(t => tags.add(t)));
+  return [...tags];
+}
+function renderTagFilters() {
+  document.getElementById('tagFs').innerHTML = getAllTags().map(t =>
+    '<div class="chip' + (curTag===t?' active':'') + '" onclick="filterTag(\'' + t + '\')">#' + esc(t) + '</div>'
+  ).join('');
+}
+
+function renderGrid() {
+  const list = getFiltered();
+  let titleText = curCat==='all' ? 'All Songs' : curCat==='favorites' ? '⭐ Favorites' :
+                  curCat.startsWith('book_') ? 'All in Book' : curCat;
+  if (curBook && curCat === 'book_' + curBook) {
+    const b = allBooks.find(x => x.id === curBook);
+    if (b) titleText = b.name;
+  }
+  document.getElementById('gridTitle').innerHTML =
+    esc(titleText) + ' <span class="sec-sub" id="gridCnt">' + list.length + ' song' + (list.length!==1?'s':'') + '</span>';
+  const grid = document.getElementById('grid');
+  if (!list.length) { grid.innerHTML = '<div class="empty"><div class="empty-ico">🎶</div><p>No songs found</p></div>'; return; }
+  grid.innerHTML = list.map(s => {
+    const c = catColor(s.category);
+    const isFav = favs.includes(s.id);
+    const preview = s.lyrics.split('\n').slice(0,3).join('\n');
+    const tagsHtml = (s.tags||[]).slice(0,2).map(t => '<span class="tag">#' + esc(t) + '</span>').join('');
+    return '<div class="sc" onclick="openSong(\'' + s.id + '\')">' +
+      '<div class="sc-strip" style="background:linear-gradient(90deg,' + c + ',' + c + '66)"></div>' +
+      '<div class="sc-hd"><div><div class="sc-ti">' + esc(s.title) + '</div><div class="sc-ar">' + esc(s.artist||'—') + '</div></div>' +
+      '<button class="fav" onclick="event.stopPropagation();toggleFav(\'' + s.id + '\')">' + (isFav?'⭐':'☆') + '</button></div>' +
+      '<div class="sc-pre">' + esc(preview) + '</div>' +
+      '<div class="sc-ft"><span class="tag" style="background:' + c + '25;color:' + c + '">' + esc(s.category) + '</span>' +
+      tagsHtml +
+      '<button class="cpbtn" id="cp-' + s.id + '" onclick="event.stopPropagation();copySong(\'' + s.id + '\')">📋 Copy</button>' +
+      '</div></div>';
+  }).join('');
+}
+
+// ── SEARCH ───────────────────────────────────────────────────────────────────
+let sT;
+function handleSearch() { clearTimeout(sT); sT = setTimeout(() => { renderGrid(); showSugg(); }, 120); }
+function showSugg() {
+  const q = document.getElementById('srchIn').value.toLowerCase().trim();
+  const box = document.getElementById('sugg');
+  if (!q) { box.classList.remove('open'); return; }
+  const m = allSongs.filter(s => s.title.toLowerCase().includes(q) || (s.artist||'').toLowerCase().includes(q)).slice(0,6);
+  if (!m.length) { box.classList.remove('open'); return; }
+  box.innerHTML = m.map(s =>
+    '<div class="sug-i" onmousedown="selSugg(\'' + s.id + '\')">' +
+    '<span style="font-size:1.2rem">🎵</span>' +
+    '<div><div class="sug-t">' + esc(s.title) + '</div>' +
+    '<div class="sug-m">' + esc(s.artist||'') + (s.artist?' · ':'') + esc(s.category) + '</div></div></div>'
+  ).join('');
+  box.classList.add('open');
+}
+function hideSugg() { setTimeout(() => document.getElementById('sugg').classList.remove('open'), 150); }
+function selSugg(id) {
+  const s = allSongs.find(x => x.id===id);
+  if (s) { document.getElementById('srchIn').value = s.title; document.getElementById('sugg').classList.remove('open'); openSong(id); }
+}
+
+// ── SONG MODAL ───────────────────────────────────────────────────────────────
+function openSong(id) {
+  const s = allSongs.find(x => x.id===id); if (!s) return;
+  curSongId = id;
+  recent = [id, ...recent.filter(r => r!==id)].slice(0,12);
+  saveRecent(); renderRecent();
+  document.getElementById('mTi').textContent  = s.title;
+  document.getElementById('mAr').textContent  = s.artist ? 'by ' + s.artist : s.category;
+  document.getElementById('mMe').textContent  = s.meta_str || '';
+  const c = catColor(s.category);
+  document.getElementById('mTags').innerHTML  =
+    '<span class="tag" style="background:' + c + '25;color:' + c + '">' + esc(s.category) + '</span>' +
+    (s.tags||[]).map(t => '<span class="tag">#' + esc(t) + '</span>').join('');
+  document.getElementById('mBody').textContent = s.lyrics;
+  updateMFav();
+  const btn = document.getElementById('cpAllBtn');
+  btn.textContent = '📋 Copy Lyrics'; btn.classList.remove('copied');
+  document.getElementById('songModal').classList.add('open');
+}
+function closeModal() { document.getElementById('songModal').classList.remove('open'); }
+function updateMFav() { document.getElementById('mFavIco').textContent = favs.includes(curSongId) ? '⭐' : '☆'; }
+function toggleFavModal() { toggleFav(curSongId); updateMFav(); }
+function copyAll() {
+  const s = allSongs.find(x => x.id===curSongId); if (!s) return;
+  navigator.clipboard.writeText(s.lyrics).then(() => {
+    const b = document.getElementById('cpAllBtn');
+    b.textContent = '✓ Copied!'; b.classList.add('copied');
+    setTimeout(() => { b.textContent = '📋 Copy Lyrics'; b.classList.remove('copied'); }, 2200);
+  });
+}
+function toggleFav(id) {
+  favs = favs.includes(id) ? favs.filter(f => f!==id) : [...favs, id];
+  saveFavs(); renderGrid(); renderSidebar();
+}
+function copySong(id) {
+  const s = allSongs.find(x => x.id===id); if (!s) return;
+  navigator.clipboard.writeText(s.lyrics).then(() => {
+    const btn = document.getElementById('cp-' + id);
+    if (btn) { btn.textContent = '✓ Copied!'; btn.classList.add('copied'); }
+    toast('Lyrics copied!');
+    setTimeout(() => { if (btn) { btn.textContent = '📋 Copy'; btn.classList.remove('copied'); } }, 2200);
+  });
+}
+
+// ── ADD SONG ─────────────────────────────────────────────────────────────────
+function openUpload() {
+  pendTags = [];
+  ['fTi','fAr','fLy','fCat'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('tagWrap').querySelectorAll('.tpill').forEach(e => e.remove());
+  document.getElementById('fBk').innerHTML = allBooks.map(b =>
+    '<option value="' + b.id + '">' + esc(b.name) + '</option>').join('');
+  document.getElementById('uplModal').classList.add('open');
+}
+function closeUpload() { document.getElementById('uplModal').classList.remove('open'); }
+function handleTagIn(e) {
+  const input = document.getElementById('tagIn');
+  if (e.key==='Enter' || e.key===',') {
+    e.preventDefault();
+    const v = input.value.replace(',','').trim().toLowerCase();
+    if (v && !pendTags.includes(v)) {
+      pendTags.push(v);
+      const pill = document.createElement('div');
+      pill.className = 'tpill';
+      pill.innerHTML = '#' + esc(v) + ' <button onclick="rmTag(\'' + v + '\',this)">×</button>';
+      document.getElementById('tagWrap').insertBefore(pill, input);
+    }
+    input.value = '';
+  }
+}
+function rmTag(tag, btn) { pendTags = pendTags.filter(t => t!==tag); btn.parentElement.remove(); }
+function saveSong() {
+  const title  = document.getElementById('fTi').value.trim();
+  const lyrics = document.getElementById('fLy').value.trim();
+  if (!title || !lyrics) { toast('Title and lyrics required!', true); return; }
+  const tagIn = document.getElementById('tagIn').value.trim();
+  if (tagIn) pendTags.push(tagIn.toLowerCase());
+  const bookId = document.getElementById('fBk').value;
+  const b = allBooks.find(x => x.id===bookId);
+  const newSong = {
+    id:       'u_' + Date.now(),
+    title, lyrics,
+    artist:   document.getElementById('fAr').value.trim(),
+    category: document.getElementById('fCat').value.trim() || 'Other',
+    tags:     [...new Set(pendTags)],
+    bookId,
+    meta_str: '',
+    _seed:    false,
+  };
+  userSongs.push(newSong);
+  allSongs = [...SEED_SONGS, ...userSongs];
+  saveUserSongs(); closeUpload(); render();
+  toast('"' + title + '" added!');
+}
+
+// ── CREATE BOOK ───────────────────────────────────────────────────────────────
+function openBookUpload()  { document.getElementById('bkuModal').classList.add('open'); }
+function closeBookUpload() { document.getElementById('bkuModal').classList.remove('open'); }
+function saveBook() {
+  const name = document.getElementById('bkN').value.trim();
+  if (!name) { toast('Book name required!', true); return; }
+  const color = BOOK_COLORS[allBooks.length % BOOK_COLORS.length];
+  const newBook = { id:'book_'+Date.now(), name, year:document.getElementById('bkY').value.trim(), desc:document.getElementById('bkD').value.trim(), color };
+  userBooks.push(newBook);
+  allBooks = [...SEED_BOOKS, ...userBooks];
+  saveUserBooks();
+  ['bkN','bkY','bkD'].forEach(id => document.getElementById(id).value = '');
+  closeBookUpload(); render();
+  toast('Book "' + name + '" created!');
+}
+
+// ── OVERLAY CLOSE ─────────────────────────────────────────────────────────────
+['songModal','uplModal','bkuModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+});
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') ['songModal','uplModal','bkuModal'].forEach(id => document.getElementById(id).classList.remove('open'));
+});
+
+render();
+</script>
+</body>
+</html>
