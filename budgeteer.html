@@ -1340,7 +1340,7 @@ function continueOffline() {
 }
 
 async function signOut() {
-  await sb.auth.signOut();
+  try { await sb.auth.signOut(); } catch {}
   currentUser = null;
   state = EMPTY_STATE();
   document.getElementById('user-info').style.display = 'none';
