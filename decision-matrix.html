@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Smart Choices">
+  <meta name="theme-color" content="#3a7d44">
+  <title>Smart Choices</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; }
+    #root { width: 100%; min-height: 100vh; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #52796f; border-radius: 3px; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // ── Utils ─────────────────────────────────────────────────────────────────
+    const uid = () => Math.random().toString(36).slice(2, 9);
+
+    // ── Forest Theme ──────────────────────────────────────────────────────────
+    const ACCENT_L = "#3a7d44";
+    const ACCENT_D = "#52b788";
+    const DANGER   = "#e07050";
+    const COLORS   = ["#3a7d44","#52796f","#74c69d","#b07d62","#d4a347","#e07050"];
+
+    function useTheme(dark) {
+      const a = dark ? ACCENT_D : ACCENT_L;
+      return {
+        bg:         dark ? "#0d1a0e" : "#f1f5f0",
+        bgAlt:      dark ? "#182318" : "#e7ede5",
+        card:       dark ? "#1a2c1b" : "#ffffff",
+        border:     dark ? "#2a4a2c" : "#c3d4bc",
+        text:       dark ? "#cce8cc" : "#1a2e1b",
+        textSub:    dark ? "#72a872" : "#527a4a",
+        input:      dark ? "#1e3020" : "#f1f5f0",
+        inputBorder:dark ? "#385540" : "#a8c5a0",
+        hover:      dark ? "#253c26" : "#dce9d8",
+        shadow:     dark ? "0 1px 4px rgba(0,0,0,0.4)"  : "0 1px 4px rgba(0,40,0,0.1)",
+        shadowLg:   dark ? "0 4px 16px rgba(0,0,0,0.5)" : "0 4px 16px rgba(0,40,0,0.1)",
+        accent: a,
+      };
+    }
+
+    // ── Scales ────────────────────────────────────────────────────────────────
+    const SCALES = {
+      "1-10":   { min: 1, max: 10,  label: "1-10 Scale",    type: "numeric" },
+      "custom": { min: 0, max: 1e6, label: "Custom Values", type: "custom"  },
+    };
+
+    // ── Storage ───────────────────────────────────────────────────────────────
+    const MATRIX_KEY = "smart_choices_matrices_v2";
+    const TREE_KEY   = "smart_choices_trees_v1";
+    const loadLocal  = (key, def) => { try { const d = localStorage.getItem(key); return d ? JSON.parse(d) : def; } catch { return def; } };
+    const saveLocal  = (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} };
+
+    // ── Matrix Helpers ────────────────────────────────────────────────────────
+    const newMatrix = () => ({
+      id: uid(), problem: "Untitled Decision",
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      objectives: [], alternatives: [], consequences: {}, scale: "1-10",
+    });
+
+    function calcScore(matrix, altId) {
+      const totalW = matrix.objectives.reduce((s, o) => s + o.weight, 0);
+      if (!totalW) return 0;
+      const scale = SCALES[matrix.scale];
+      const customRanges = {};
+      if (scale.type === "custom") {
+        for (const o of matrix.objectives) {
+          const vals = matrix.alternatives.map(a => matrix.consequences[`${a.id}_${o.id}`]).filter(v => v !== undefined && v !== "").map(Number);
+          if (vals.length) customRanges[o.id] = { min: Math.min(...vals), max: Math.max(...vals) };
+        }
+      }
+      let score = 0;
+      for (const o of matrix.objectives) {
+        const raw = matrix.consequences[`${altId}_${o.id}`];
+        if (raw === undefined || raw === "") continue;
+        const val = parseFloat(raw);
+        let norm;
+        if (scale.type === "custom" && customRanges[o.id]) {
+          const { min, max } = customRanges[o.id];
+          const span = max - min;
+          norm = span === 0 ? 1 : o.direction === "higher" ? (val - min) / span : (max - val) / span;
+        } else {
+          norm = o.direction === "higher" ? (val - scale.min) / (scale.max - scale.min) : (scale.max - val) / (scale.max - scale.min);
+        }
+        score += norm * (o.weight / totalW) * 100;
+      }
+      return Math.round(score * 10) / 10;
+    }
+
+    function getWinner(matrix) {
+      if (!matrix.alternatives.length || !matrix.objectives.length) return null;
+      const scored = matrix.alternatives.map(a => ({ ...a, score: calcScore(matrix, a.id) }));
+      const best = scored.reduce((a, b) => b.score > a.score ? b : a, scored[0]);
+      return best.score > 0 ? best : null;
+    }
+
+    // ── Tree Helpers ──────────────────────────────────────────────────────────
+    const newTreeNode = (label = "Decision") => ({ id: uid(), label, note: "", children: [] });
+    const newTree = () => ({
+      id: uid(), title: "Untitled Tree",
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      root: newTreeNode("Start"),
+    });
+
+    function updateNodeInTree(node, id, patch) {
+      if (node.id === id) return { ...node, ...patch };
+      return { ...node, children: node.children.map(c => updateNodeInTree(c, id, patch)) };
+    }
+    function addChildToNode(node, parentId) {
+      if (node.id === parentId) return { ...node, children: [...node.children, newTreeNode("")] };
+      return { ...node, children: node.children.map(c => addChildToNode(c, parentId)) };
+    }
+    function removeNodeFromTree(node, id) {
+      return { ...node, children: node.children.filter(c => c.id !== id).map(c => removeNodeFromTree(c, id)) };
+    }
+    function findNode(root, id) {
+      if (root.id === id) return root;
+      for (const c of root.children || []) { const f = findNode(c, id); if (f) return f; }
+      return null;
+    }
+    function countNodes(node) { return 1 + (node.children || []).reduce((s, c) => s + countNodes(c), 0); }
+    function getDepth(node) {
+      if (!node.children || node.children.length === 0) return 0;
+      return 1 + Math.max(...node.children.map(getDepth));
+    }
+
+    // ── Tree Layout ───────────────────────────────────────────────────────────
+    const NW = 164, NH = 52, HGAP = 28, VGAP = 80, TPAD = 48;
+
+    function subtreeWidth(node) {
+      if (!node.children || node.children.length === 0) return NW;
+      const total = node.children.reduce((s, c) => s + subtreeWidth(c) + HGAP, 0) - HGAP;
+      return Math.max(NW, total);
+    }
+    function layoutNodes(node, ox = 0, depth = 0) {
+      const sw = subtreeWidth(node);
+      const x = ox + (sw - NW) / 2;
+      const y = depth * (NH + VGAP);
+      let cx = ox;
+      const children = (node.children || []).map(child => {
+        const laid = layoutNodes(child, cx, depth + 1);
+        cx += subtreeWidth(child) + HGAP;
+        return laid;
+      });
+      return { ...node, x, y, children };
+    }
+
+    // ── Tree SVG Components ───────────────────────────────────────────────────
+    function TreeEdge({ x1, y1, x2, y2, color }) {
+      const mid = (y2 - y1) * 0.55;
+      const d = `M${x1},${y1} C${x1},${y1 + mid} ${x2},${y2 - mid} ${x2},${y2}`;
+      return <path d={d} fill="none" stroke={color} strokeWidth={1.5} opacity={0.45} />;
+    }
+
+    function TreeNodeSVG({ node, selectedId, onSelect, th, dark, isRoot }) {
+      const isSelected = node.id === selectedId;
+      const isLeaf = !node.children || node.children.length === 0;
+      const accent = dark ? ACCENT_D : ACCENT_L;
+
+      const fill   = isRoot  ? `${accent}28`
+                   : isLeaf  ? (dark ? "#3d2a1e" : "#fdf0e0")
+                   :           (dark ? "#1a2c1b" : "#f0f7f0");
+      const stroke = isSelected ? accent
+                   : isLeaf     ? (dark ? "#7a5c3a" : "#c4956a")
+                   :              th.border;
+      const strokeW = isSelected ? 2.5 : 1.5;
+      const rx = isLeaf ? NH / 2 : 10;
+
+      const label = node.label || "…";
+      const line1 = label.length > 17 ? label.slice(0, 16) + "…" : label;
+      const hasNote = node.note && node.note.trim();
+      const noteLine = hasNote ? (node.note.length > 22 ? node.note.slice(0, 20) + "…" : node.note) : null;
+      const textY = hasNote ? NH / 2 - 8 : NH / 2;
+      const noteColor = isLeaf ? (dark ? "#a07858" : "#9a6b40") : th.textSub;
+
+      return (
+        <g
+          transform={`translate(${node.x + TPAD},${node.y + TPAD})`}
+          style={{ cursor: "pointer" }}
+          onClick={e => { e.stopPropagation(); onSelect(node.id === selectedId ? null : node.id); }}
+        >
+          <rect width={NW} height={NH} rx={rx} fill={fill} stroke={stroke} strokeWidth={strokeW} />
+          {isSelected && (
+            <rect width={NW} height={NH} rx={rx} fill="none" stroke={accent} strokeWidth={1.5} strokeDasharray="5 3" opacity={0.7} />
+          )}
+          <text
+            x={NW / 2} y={textY + 5}
+            textAnchor="middle" dominantBaseline="middle"
+            fill={isRoot ? accent : th.text}
+            fontSize={13} fontWeight={isRoot || isSelected ? 700 : 600}
+            style={{ userSelect: "none", pointerEvents: "none" }}
+          >{line1}</text>
+          {noteLine && (
+            <text
+              x={NW / 2} y={NH / 2 + 11}
+              textAnchor="middle" dominantBaseline="middle"
+              fill={noteColor} fontSize={10}
+              style={{ userSelect: "none", pointerEvents: "none" }}
+            >{noteLine}</text>
+          )}
+        </g>
+      );
+    }
+
+    function TreeCanvas({ root, selectedId, onSelect, th, dark }) {
+      const laid  = layoutNodes(root);
+      const sw    = subtreeWidth(root);
+      const depth = getDepth(root);
+      const svgW  = Math.max(360, sw + TPAD * 2);
+      const svgH  = Math.max(220, depth * (NH + VGAP) + NH + TPAD * 2);
+
+      const edges = [], nodes = [];
+      function traverse(node, parent, isRoot) {
+        if (parent) {
+          edges.push(
+            <TreeEdge
+              key={`e-${node.id}`}
+              x1={parent.x + TPAD + NW / 2} y1={parent.y + TPAD + NH}
+              x2={node.x   + TPAD + NW / 2} y2={node.y   + TPAD}
+              color={th.textSub}
+            />
+          );
+        }
+        nodes.push(
+          <TreeNodeSVG
+            key={node.id} node={node}
+            selectedId={selectedId} onSelect={onSelect}
+            th={th} dark={dark} isRoot={isRoot}
+          />
+        );
+        (node.children || []).forEach(c => traverse(c, node, false));
+      }
+      traverse(laid, null, true);
+
+      return (
+        <div
+          style={{ overflowX: "auto", overflowY: "auto", maxHeight: "58vh", minHeight: 200, background: th.bgAlt, borderRadius: 12, border: `1px solid ${th.border}` }}
+          onClick={() => onSelect(null)}
+        >
+          <svg width={svgW} height={svgH} style={{ display: "block" }}>
+            <defs>
+              <pattern id="forestgrid" width="24" height="24" patternUnits="userSpaceOnUse">
+                <path d="M 24 0 L 0 0 0 24" fill="none" stroke={th.border} strokeWidth="0.5" opacity="0.5" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#forestgrid)" />
+            {edges}
+            {nodes}
+          </svg>
+        </div>
+      );
+    }
+
+    // ── Tree Editor ───────────────────────────────────────────────────────────
+    function TreeEditor({ tree, onUpdate, onBack, dark, setDark, th }) {
+      const [selectedId, setSelectedId] = useState(null);
+      const [editTitle, setEditTitle] = useState(false);
+      const accent = dark ? ACCENT_D : ACCENT_L;
+
+      const update = patch => onUpdate({ ...tree, ...patch, updatedAt: new Date().toISOString() });
+      const selectedNode = selectedId ? findNode(tree.root, selectedId) : null;
+      const isRoot = selectedNode && selectedNode.id === tree.root.id;
+
+      const handleAddChild = () => {
+        const newRoot = addChildToNode(tree.root, selectedId);
+        const parentInNew = findNode(newRoot, selectedId);
+        update({ root: newRoot });
+        if (parentInNew && parentInNew.children.length > 0)
+          setSelectedId(parentInNew.children[parentInNew.children.length - 1].id);
+      };
+
+      return (
+        <div style={{ minHeight: "100vh", background: th.bgAlt, color: th.text }}>
+          {/* Header */}
+          <div style={{ background: th.bg, borderBottom: `1px solid ${th.border}`, padding: "12px 16px", position: "sticky", top: 0, zIndex: 10, boxShadow: th.shadow }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+              <button onClick={onBack} style={{ background: th.input, border: `1px solid ${th.border}`, borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 14, fontWeight: 600, color: th.text }}>← Back</button>
+              {editTitle ? (
+                <input
+                  autoFocus
+                  style={{ flex: 1, fontSize: 18, fontWeight: 700, background: th.input, border: `2px solid ${accent}`, borderRadius: 8, padding: "6px 10px", color: th.text, outline: "none" }}
+                  value={tree.title}
+                  onChange={e => update({ title: e.target.value })}
+                  onBlur={() => setEditTitle(false)}
+                  onKeyDown={e => e.key === "Enter" && setEditTitle(false)}
+                />
+              ) : (
+                <div onClick={() => setEditTitle(true)} style={{ flex: 1, fontSize: 18, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>{tree.title}</div>
+              )}
+              <button onClick={() => setDark(d => !d)} style={{ background: th.input, border: `1px solid ${th.border}`, borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 16 }}>{dark ? "☀️" : "🌙"}</button>
+            </div>
+            <div style={{ fontSize: 12, color: th.textSub }}>
+              {selectedNode ? `Editing: "${selectedNode.label || "…"}"` : "Click any node to select · click canvas to deselect"}
+            </div>
+          </div>
+
+          <div style={{ maxWidth: 960, margin: "0 auto", padding: 20 }}>
+            <TreeCanvas root={tree.root} selectedId={selectedId} onSelect={setSelectedId} th={th} dark={dark} />
+
+            {/* Edit Panel */}
+            <div style={{ marginTop: 16, background: th.bg, border: `1px solid ${th.border}`, borderRadius: 12, padding: 16, boxShadow: th.shadow }}>
+              {selectedNode ? (
+                <>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: th.textSub, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Edit Node</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div>
+                      <label style={{ fontSize: 12, color: th.textSub, display: "block", marginBottom: 4 }}>Label</label>
+                      <input
+                        style={{ width: "100%", padding: "10px 12px", background: th.input, border: `1px solid ${th.inputBorder}`, borderRadius: 8, color: th.text, fontSize: 14, fontWeight: 600, outline: "none" }}
+                        value={selectedNode.label}
+                        onChange={e => update({ root: updateNodeInTree(tree.root, selectedId, { label: e.target.value }) })}
+                        placeholder="Node label…"
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, color: th.textSub, display: "block", marginBottom: 4 }}>Note / Outcome</label>
+                      <input
+                        style={{ width: "100%", padding: "10px 12px", background: th.input, border: `1px solid ${th.inputBorder}`, borderRadius: 8, color: th.text, fontSize: 14, outline: "none" }}
+                        value={selectedNode.note}
+                        onChange={e => update({ root: updateNodeInTree(tree.root, selectedId, { note: e.target.value }) })}
+                        placeholder="Optional note or outcome…"
+                      />
+                    </div>
+                    <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                      <button
+                        onClick={handleAddChild}
+                        style={{ flex: 1, background: accent, color: "#fff", border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+                      >+ Add Branch</button>
+                      {!isRoot && (
+                        <button
+                          onClick={() => { update({ root: removeNodeFromTree(tree.root, selectedId) }); setSelectedId(null); }}
+                          style={{ background: th.input, color: DANGER, border: `1px solid ${DANGER}50`, borderRadius: 8, padding: "10px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+                        >Delete</button>
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div style={{ textAlign: "center", padding: "16px 0", color: th.textSub }}>
+                  <div style={{ fontSize: 26, marginBottom: 8 }}>🌿</div>
+                  <div style={{ fontSize: 14, marginBottom: 12 }}>Click a node to edit it or add branches</div>
+                  <button
+                    onClick={() => setSelectedId(tree.root.id)}
+                    style={{ background: accent, color: "#fff", border: "none", borderRadius: 8, padding: "8px 18px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                  >Select Root Node</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Tree Card ─────────────────────────────────────────────────────────────
+    function TreeCard({ tree, onOpen, onDelete, th, dark }) {
+      const accent = dark ? ACCENT_D : ACCENT_L;
+      const date = new Date(tree.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      return (
+        <div
+          onClick={() => onOpen(tree.id)}
+          style={{ background: th.card, border: `1px solid ${th.border}`, borderRadius: 12, padding: 16, cursor: "pointer", transition: "all 0.15s", boxShadow: th.shadow }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.boxShadow = th.shadowLg; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = th.border; e.currentTarget.style.boxShadow = th.shadow; }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 12 }}>
+            <div style={{ flex: 1, paddingRight: 8 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: th.text, marginBottom: 4 }}>{tree.title}</div>
+              <div style={{ fontSize: 12, color: th.textSub }}>{date} · {countNodes(tree.root)} nodes · {getDepth(tree.root)} levels deep</div>
+            </div>
+            <button onClick={e => { e.stopPropagation(); onDelete(tree.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: th.textSub, fontSize: 18, padding: 4, lineHeight: 1 }}>×</button>
+          </div>
+          <div style={{ background: `${accent}12`, border: `1px solid ${accent}30`, borderRadius: 8, padding: "10px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 18 }}>🌲</span>
+            <span style={{ fontSize: 13, color: th.textSub }}>Root: <strong style={{ color: th.text }}>{tree.root.label || "…"}</strong></span>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Matrix Card ───────────────────────────────────────────────────────────
+    function MatrixCard({ matrix, onOpen, onDelete, th, dark }) {
+      const accent = dark ? ACCENT_D : ACCENT_L;
+      const winner = getWinner(matrix);
+      const date = new Date(matrix.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const isEmpty = !matrix.alternatives.length && !matrix.objectives.length;
+      return (
+        <div
+          onClick={() => onOpen(matrix.id)}
+          style={{ background: th.card, border: `1px solid ${th.border}`, borderRadius: 12, padding: 16, cursor: "pointer", transition: "all 0.15s", boxShadow: th.shadow }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.boxShadow = th.shadowLg; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = th.border; e.currentTarget.style.boxShadow = th.shadow; }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 12 }}>
+            <div style={{ flex: 1, paddingRight: 8 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: th.text, marginBottom: 4 }}>{matrix.problem}</div>
+              <div style={{ fontSize: 12, color: th.textSub }}>{date} · {matrix.objectives.length} obj · {matrix.alternatives.length} alt</div>
+            </div>
+            <button onClick={e => { e.stopPropagation(); onDelete(matrix.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: th.textSub, fontSize: 18, padding: 4, lineHeight: 1 }}>×</button>
+          </div>
+          {winner ? (
+            <div style={{ background: `${accent}15`, border: `1px solid ${accent}30`, borderRadius: 8, padding: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: accent, textTransform: "uppercase", marginBottom: 3 }}>★ Top Choice</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: th.text }}>{winner.name} <span style={{ color: th.textSub, fontWeight: 400 }}>({winner.score}/100)</span></div>
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, color: th.textSub, fontStyle: "italic" }}>{isEmpty ? "Empty — tap to start" : "Not scored yet"}</div>
+          )}
+        </div>
+      );
+    }
+
+    // ── Dashboard ─────────────────────────────────────────────────────────────
+    function Dashboard({ matrices, trees, onOpenMatrix, onOpenTree, onNewMatrix, onNewTree, onDeleteMatrix, onDeleteTree, dark, setDark, th, loading }) {
+      const [tab, setTab] = useState("matrices");
+      const accent = dark ? ACCENT_D : ACCENT_L;
+
+      return (
+        <div style={{ minHeight: "100vh", background: th.bgAlt, color: th.text }}>
+          <div style={{ background: th.bg, borderBottom: `1px solid ${th.border}`, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 10, boxShadow: th.shadow }}>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 700, color: th.text }}>🌲 Smart Choices</div>
+              <div style={{ fontSize: 12, color: th.textSub }}>Make better decisions</div>
+            </div>
+            <button onClick={() => setDark(d => !d)} style={{ background: th.input, border: `1px solid ${th.border}`, borderRadius: 8, padding: "8px 12px", cursor: "pointer", fontSize: 16 }}>{dark ? "☀️" : "🌙"}</button>
+          </div>
+
+          <div style={{ maxWidth: 800, margin: "0 auto", padding: 20 }}>
+            {/* Tabs */}
+            <div style={{ display: "flex", gap: 4, marginBottom: 24, background: th.bg, border: `1px solid ${th.border}`, borderRadius: 10, padding: 4 }}>
+              {[["matrices", "📊 Decision Matrix"], ["trees", "🌿 Decision Tree"]].map(([key, label]) => (
+                <button
+                  key={key} onClick={() => setTab(key)}
+                  style={{ flex: 1, padding: "10px 16px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 14, fontWeight: 600, transition: "all 0.15s", background: tab === key ? accent : "transparent", color: tab === key ? "#fff" : th.textSub }}
+                >{label}</button>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 700 }}>{tab === "matrices" ? "My Matrices" : "My Trees"}</h2>
+              <button
+                onClick={tab === "matrices" ? onNewMatrix : onNewTree}
+                style={{ background: accent, color: "#fff", border: "none", borderRadius: 8, padding: "10px 16px", fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: th.shadow }}
+              >+ New</button>
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: "center", padding: 40, color: th.textSub }}>Loading…</div>
+            ) : tab === "matrices" ? (
+              matrices.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 60, border: `2px dashed ${th.border}`, borderRadius: 12, background: th.bg }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>🧭</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>No matrices yet</div>
+                  <div style={{ fontSize: 14, color: th.textSub }}>Weigh your options with a scored decision matrix</div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gap: 12 }}>{matrices.map(m => <MatrixCard key={m.id} matrix={m} onOpen={onOpenMatrix} onDelete={onDeleteMatrix} th={th} dark={dark} />)}</div>
+              )
+            ) : (
+              trees.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 60, border: `2px dashed ${th.border}`, borderRadius: 12, background: th.bg }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>🌱</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>No trees yet</div>
+                  <div style={{ fontSize: 14, color: th.textSub }}>Map out branching choices and their outcomes</div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gap: 12 }}>{trees.map(t => <TreeCard key={t.id} tree={t} onOpen={onOpenTree} onDelete={onDeleteTree} th={th} dark={dark} />)}</div>
+              )
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ── Matrix Editor ─────────────────────────────────────────────────────────
+    function MatrixEditor({ matrix, onUpdate, onBack, dark, setDark, th }) {
+      const [editingProblem, setEditingProblem] = useState(false);
+      const [view, setView] = useState("setup");
+      const scale  = SCALES[matrix.scale];
+      const accent = dark ? ACCENT_D : ACCENT_L;
+      const update = patch => onUpdate({ ...matrix, ...patch, updatedAt: new Date().toISOString() });
+
+      const getScore = (altId, objId) => matrix.consequences[`${altId}_${objId}`] ?? "";
+      const setScore = (altId, objId, val) => {
+        if (scale.type === "custom") {
+          update({ consequences: { ...matrix.consequences, [`${altId}_${objId}`]: val } });
+        } else {
+          const v = val === "" ? "" : Math.min(scale.max, Math.max(scale.min, parseInt(val) || scale.min));
+          update({ consequences: { ...matrix.consequences, [`${altId}_${objId}`]: v } });
+        }
+      };
+
+      const addObjective    = () => update({ objectives: [...matrix.objectives, { id: uid(), name: "", weight: 20, direction: "higher" }] });
+      const removeObjective = id  => update({ objectives: matrix.objectives.filter(o => o.id !== id), consequences: Object.fromEntries(Object.entries(matrix.consequences).filter(([k]) => !k.includes(`_${id}`))) });
+      const updateObj = (id, field, val) => {
+        const updated = matrix.objectives.map(o => o.id === id ? { ...o, [field]: val } : o);
+        if (field === "name") {
+          const kw = ["cost","price","expense","time","duration","wait","delay","risk","error","defect","distance","commute","effort"];
+          const low = val.toLowerCase();
+          const obj = updated.find(o => o.id === id);
+          if (obj && kw.some(k => low.includes(k)) && obj.direction === "higher") obj.direction = "lower";
+          else if (obj && !kw.some(k => low.includes(k)) && obj.direction === "lower" && obj.name !== "") {
+            if (kw.some(k => obj.name.toLowerCase().includes(k)) && !kw.some(k => low.includes(k))) obj.direction = "higher";
+          }
+        }
+        if (field === "weight") {
+          const total = updated.reduce((s, o) => s + o.weight, 0);
+          if (total !== 100 && total > 0) { const sc = 100 / total; updated.forEach(o => o.weight = Math.round(o.weight * sc)); }
+        }
+        update({ objectives: updated });
+      };
+
+      const addAlternative    = () => update({ alternatives: [...matrix.alternatives, { id: uid(), name: "" }] });
+      const removeAlternative = id  => update({ alternatives: matrix.alternatives.filter(a => a.id !== id), consequences: Object.fromEntries(Object.entries(matrix.consequences).filter(([k]) => !k.startsWith(`${id}_`))) });
+      const updateAlt = (id, name) => update({ alternatives: matrix.alternatives.map(a => a.id === id ? { ...a, name } : a) });
+
+      const scores   = matrix.alternatives.map(a => ({ ...a, score: calcScore(matrix, a.id) }));
+      const maxScore = Math.max(...scores.map(s => s.score));
+      const winner   = scores.find(s => s.score === maxScore && maxScore > 0);
+      const canScore = matrix.alternatives.length > 0 && matrix.objectives.length > 0;
+
+      const tabBtn = (label, v, disabled = false) => (
+        <button key={v} onClick={() => !disabled && setView(v)} disabled={disabled} style={{ padding: "8px 16px", background: view === v ? accent : "transparent", color: view === v ? "#fff" : disabled ? th.textSub : th.text, border: `1px solid ${view === v ? accent : th.border}`, borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: disabled ? "not-allowed" : "pointer", whiteSpace: "nowrap" }}>{label}</button>
+      );
+
+      const cardStyle = { background: th.bg, border: `1px solid ${th.border}`, borderRadius: 12, padding: 16, marginBottom: 20, boxShadow: th.shadow };
+      const inpStyle  = { background: th.input, border: `1px solid ${th.inputBorder}`, borderRadius: 8, color: th.text, outline: "none" };
+
+      return (
+        <div style={{ minHeight: "100vh", background: th.bgAlt, color: th.text }}>
+          <div style={{ background: th.bg, borderBottom: `1px solid ${th.border}`, padding: "12px 16px", position: "sticky", top: 0, zIndex: 10, boxShadow: th.shadow }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <button onClick={onBack} style={{ ...inpStyle, padding: "8px 12px", cursor: "pointer", fontSize: 14, fontWeight: 600 }}>← Back</button>
+              <button onClick={() => setDark(d => !d)} style={{ ...inpStyle, padding: "8px 12px", cursor: "pointer", fontSize: 16, marginLeft: "auto" }}>{dark ? "☀️" : "🌙"}</button>
+            </div>
+            {editingProblem ? (
+              <input autoFocus style={{ width: "100%", fontSize: 18, fontWeight: 700, ...inpStyle, border: `2px solid ${accent}`, padding: "8px 12px" }} value={matrix.problem} onChange={e => update({ problem: e.target.value })} onBlur={() => setEditingProblem(false)} onKeyDown={e => e.key === "Enter" && setEditingProblem(false)} />
+            ) : (
+              <div onClick={() => setEditingProblem(true)} style={{ fontSize: 18, fontWeight: 700, cursor: "pointer", padding: "4px 0" }}>{matrix.problem}</div>
+            )}
+            <div style={{ display: "flex", gap: 8, marginTop: 12, overflowX: "auto" }}>
+              {tabBtn("Setup", "setup")}
+              {tabBtn("Score", "score", !canScore)}
+              {tabBtn("Results", "results", !canScore)}
+            </div>
+          </div>
+
+          <div style={{ maxWidth: 800, margin: "0 auto", padding: 20 }}>
+            {view === "setup" && (
+              <>
+                {/* Scale */}
+                <div style={cardStyle}>
+                  <label style={{ fontSize: 13, fontWeight: 600, color: th.textSub, textTransform: "uppercase", display: "block", marginBottom: 8 }}>Scoring Scale</label>
+                  <select value={matrix.scale} onChange={e => update({ scale: e.target.value, consequences: {} })} style={{ width: "100%", padding: 12, ...inpStyle, fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                    {Object.entries(SCALES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  </select>
+                  <div style={{ fontSize: 12, color: th.textSub, marginTop: 8 }}>{scale.type === "custom" ? "Enter real values like salary, cost, distance" : "Rate each alternative from 1 to 10"}</div>
+                </div>
+
+                {/* Objectives */}
+                <div style={cardStyle}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: th.textSub, textTransform: "uppercase" }}>Objectives</div>
+                    <button onClick={addObjective} style={{ background: accent, color: "#fff", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>+ Add</button>
+                  </div>
+                  {matrix.objectives.length === 0 ? (
+                    <div style={{ fontSize: 13, color: th.textSub, fontStyle: "italic", padding: 20, textAlign: "center" }}>No objectives yet. Add what matters in your decision.</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                      {matrix.objectives.map(o => (
+                        <div key={o.id} style={{ background: th.bgAlt, border: `1px solid ${th.border}`, borderRadius: 8, padding: 12 }}>
+                          <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                            <input style={{ flex: 1, fontSize: 14, fontWeight: 600, padding: "8px 10px", ...inpStyle }} value={o.name} onChange={e => updateObj(o.id, "name", e.target.value)} placeholder="Objective name" />
+                            <button onClick={() => removeObjective(o.id)} style={{ background: "none", border: "none", cursor: "pointer", color: DANGER, fontSize: 18, padding: "0 8px" }}>×</button>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                            <span style={{ fontSize: 12, color: th.textSub, minWidth: 80 }}>Importance</span>
+                            <input type="range" min={1} max={100} value={o.weight} style={{ flex: 1, accentColor: accent }} onChange={e => updateObj(o.id, "weight", Number(e.target.value))} />
+                            <span style={{ fontSize: 14, fontWeight: 700, color: accent, minWidth: 40, textAlign: "right" }}>{o.weight}%</span>
+                          </div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            {["higher","lower"].map(dir => (
+                              <button key={dir} onClick={() => updateObj(o.id, "direction", dir)} style={{ flex: 1, padding: 8, background: o.direction === dir ? `${accent}20` : th.input, border: `1px solid ${o.direction === dir ? accent : th.inputBorder}`, borderRadius: 6, color: o.direction === dir ? accent : th.text, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                                {dir === "higher" ? "↑ Higher better" : "↓ Lower better"}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Alternatives */}
+                <div style={{ ...cardStyle, marginBottom: 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: th.textSub, textTransform: "uppercase" }}>Alternatives</div>
+                    <button onClick={addAlternative} style={{ background: accent, color: "#fff", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>+ Add</button>
+                  </div>
+                  {matrix.alternatives.length === 0 ? (
+                    <div style={{ fontSize: 13, color: th.textSub, fontStyle: "italic", padding: 20, textAlign: "center" }}>No alternatives yet. Add the options you're choosing between.</div>
+                  ) : (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {matrix.alternatives.map((a, i) => (
+                        <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, background: th.bgAlt, border: `1px solid ${th.border}`, borderRadius: 8, padding: 10 }}>
+                          <div style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS[i % COLORS.length], flexShrink: 0 }} />
+                          <input style={{ flex: 1, fontSize: 14, fontWeight: 600, background: "transparent", border: "none", outline: "none", color: th.text }} value={a.name} onChange={e => updateAlt(a.id, e.target.value)} placeholder="Alternative name" />
+                          <button onClick={() => removeAlternative(a.id)} style={{ background: "none", border: "none", cursor: "pointer", color: DANGER, fontSize: 18, padding: "0 4px" }}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {view === "score" && (
+              <div style={cardStyle}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: th.textSub, textTransform: "uppercase", marginBottom: 16 }}>Score Each Alternative</div>
+                <div style={{ overflowX: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                    <thead>
+                      <tr>
+                        <th style={{ padding: "12px 8px", textAlign: "left", fontWeight: 600, fontSize: 13, color: th.textSub, borderBottom: `1px solid ${th.border}`, position: "sticky", left: 0, background: th.bg, zIndex: 1 }}>Alt</th>
+                        {matrix.objectives.map(o => (
+                          <th key={o.id} style={{ padding: "12px 8px", textAlign: "center", fontWeight: 600, fontSize: 12, color: th.textSub, borderBottom: `1px solid ${th.border}`, minWidth: 80 }}>
+                            <div style={{ marginBottom: 4 }}>{o.name}</div>
+                            <div style={{ fontSize: 10, fontWeight: 400 }}>{o.direction === "higher" ? "↑" : "↓"}</div>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {matrix.alternatives.map((a, i) => (
+                        <tr key={a.id} style={{ background: i % 2 === 0 ? th.bg : th.bgAlt }}>
+                          <td style={{ padding: "10px 8px", borderBottom: `1px solid ${th.border}`, position: "sticky", left: 0, background: i % 2 === 0 ? th.bg : th.bgAlt, zIndex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                              <div style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS[i % COLORS.length] }} />
+                              <span style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap" }}>{a.name}</span>
+                            </div>
+                          </td>
+                          {matrix.objectives.map(o => (
+                            <td key={o.id} style={{ padding: "8px", borderBottom: `1px solid ${th.border}`, textAlign: "center" }}>
+                              <input
+                                type={scale.type === "custom" ? "text" : "number"}
+                                min={scale.type === "custom" ? undefined : scale.min}
+                                max={scale.type === "custom" ? undefined : scale.max}
+                                step={scale.type === "custom" ? "any" : "1"}
+                                style={{ width: scale.type === "custom" ? 90 : 60, textAlign: "center", ...inpStyle, padding: "8px 4px", fontSize: 14, fontWeight: 600 }}
+                                value={getScore(a.id, o.id)} onChange={e => setScore(a.id, o.id, e.target.value)} placeholder="—"
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {view === "results" && (
+              <>
+                <div style={cardStyle}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: th.textSub, textTransform: "uppercase", marginBottom: 16 }}>Final Scores</div>
+                  {scores.every(s => s.score === 0) ? (
+                    <div style={{ fontSize: 14, color: th.textSub, fontStyle: "italic", padding: 20, textAlign: "center" }}>Add scores in the Score tab to see results</div>
+                  ) : (
+                    [...scores].sort((a, b) => b.score - a.score).map(a => {
+                      const isWin = winner && a.id === winner.id;
+                      const i = matrix.alternatives.findIndex(x => x.id === a.id);
+                      return (
+                        <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: 12, borderRadius: 8, marginBottom: 8, background: isWin ? `${accent}15` : th.bgAlt, border: `1px solid ${isWin ? accent : th.border}` }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 120 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS[i % COLORS.length] }} />
+                            <span style={{ fontSize: 14, fontWeight: 700 }}>{a.name}</span>
+                          </div>
+                          {isWin && <span style={{ fontSize: 11, fontWeight: 700, background: accent, color: "#fff", borderRadius: 99, padding: "3px 8px" }}>★</span>}
+                          <div style={{ flex: 1, background: th.border, borderRadius: 99, height: 10, overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${a.score}%`, background: COLORS[i % COLORS.length], borderRadius: 99, transition: "width 0.3s" }} />
+                          </div>
+                          <span style={{ fontSize: 16, fontWeight: 700, minWidth: 40, textAlign: "right" }}>{a.score}</span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {!scores.every(s => s.score === 0) && (
+                  <div style={{ ...cardStyle, marginBottom: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: th.textSub, textTransform: "uppercase", marginBottom: 16 }}>By Objective</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 16 }}>
+                      {matrix.objectives.map(o => (
+                        <div key={o.id} style={{ background: th.bgAlt, border: `1px solid ${th.border}`, borderRadius: 8, padding: 12 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 10 }}>{o.name}</div>
+                          {matrix.alternatives.map((a, i) => {
+                            const v = matrix.consequences[`${a.id}_${o.id}`];
+                            let pct = 0;
+                            if (v !== undefined && v !== "") {
+                              if (scale.type === "custom") {
+                                const vals = matrix.alternatives.map(alt => matrix.consequences[`${alt.id}_${o.id}`]).filter(x => x !== undefined && x !== "").map(Number);
+                                if (vals.length) { const mn = Math.min(...vals), mx = Math.max(...vals), sp = mx - mn, val = parseFloat(v); pct = sp === 0 ? 100 : (o.direction === "higher" ? (val-mn)/sp : (mx-val)/sp) * 100; }
+                              } else {
+                                pct = o.direction === "higher" ? ((v-scale.min)/(scale.max-scale.min))*100 : ((scale.max-v)/(scale.max-scale.min))*100;
+                              }
+                            }
+                            return (
+                              <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                                <span style={{ fontSize: 11, width: 60, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</span>
+                                <div style={{ flex: 1, background: th.border, borderRadius: 99, height: 6 }}>
+                                  <div style={{ height: "100%", width: `${pct}%`, background: COLORS[i % COLORS.length], borderRadius: 99 }} />
+                                </div>
+                                <span style={{ fontSize: 11, fontWeight: 600, minWidth: 30, textAlign: "right" }}>{v || "—"}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ── App ───────────────────────────────────────────────────────────────────
+    function App() {
+      const [dark, setDark] = useState(() => {
+        const saved = loadLocal("sc_dark", null);
+        if (saved !== null) return saved;
+        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      });
+      const [matrices,     setMatrices]     = useState([]);
+      const [trees,        setTrees]        = useState([]);
+      const [activeMatrix, setActiveMatrix] = useState(null);
+      const [activeTree,   setActiveTree]   = useState(null);
+      const [loading,      setLoading]      = useState(true);
+      const th = useTheme(dark);
+
+      useEffect(() => {
+        setMatrices(loadLocal(MATRIX_KEY, []).map(m => ({ scale: "1-10", ...m })));
+        setTrees(loadLocal(TREE_KEY, []));
+        setLoading(false);
+      }, []);
+
+      useEffect(() => { saveLocal("sc_dark", dark); }, [dark]);
+      useEffect(() => { if (!loading) saveLocal(MATRIX_KEY, matrices); }, [matrices, loading]);
+      useEffect(() => { if (!loading) saveLocal(TREE_KEY, trees); }, [trees, loading]);
+
+      const handleNewMatrix = () => { const m = newMatrix(); setMatrices(p => [m, ...p]); setActiveMatrix(m.id); };
+      const handleNewTree   = () => { const t = newTree();   setTrees(p   => [t, ...p]); setActiveTree(t.id);   };
+
+      const activeMatrixObj = matrices.find(m => m.id === activeMatrix);
+      const activeTreeObj   = trees.find(t   => t.id === activeTree);
+
+      if (activeMatrixObj) return (
+        <MatrixEditor matrix={activeMatrixObj} onUpdate={u => setMatrices(p => p.map(m => m.id === u.id ? u : m))} onBack={() => setActiveMatrix(null)} dark={dark} setDark={setDark} th={th} />
+      );
+      if (activeTreeObj) return (
+        <TreeEditor tree={activeTreeObj} onUpdate={u => setTrees(p => p.map(t => t.id === u.id ? u : t))} onBack={() => setActiveTree(null)} dark={dark} setDark={setDark} th={th} />
+      );
+
+      return (
+        <Dashboard
+          matrices={matrices} trees={trees}
+          onOpenMatrix={setActiveMatrix} onOpenTree={setActiveTree}
+          onNewMatrix={handleNewMatrix}  onNewTree={handleNewTree}
+          onDeleteMatrix={id => setMatrices(p => p.filter(m => m.id !== id))}
+          onDeleteTree={id   => setTrees(p   => p.filter(t => t.id !== id))}
+          dark={dark} setDark={setDark} th={th} loading={loading}
+        />
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
