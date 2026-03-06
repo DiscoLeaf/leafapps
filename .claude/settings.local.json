@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Leaf\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\f--GitClone-leafapps-leafapps\\\\b6219c2a-d415-481d-95f7-1f2bb2498ede\\\\scratchpad\\\\edit_feature2.ps1\")"
+    ]
+  }
+}
