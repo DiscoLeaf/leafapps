@@ -151,6 +151,10 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:po
 /* Scrollbar */
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+.lkbtn{background:none;border:none;cursor:pointer;padding:0 0 0 3px;font-size:10px;line-height:1;opacity:.35;transition:opacity .12s}
+.lkbtn:hover,.lkbtn.on{opacity:1}
+.rfvrow{display:flex;gap:3px;align-items:center}
+.rfvrow input[type=number]{width:50px}
 @media(max-width:900px){.dl,.sg,.nl,.xl{grid-template-columns:1fr}.dsi{position:static}}
 </style>
 </head>
@@ -169,12 +173,44 @@ window.addEventListener('load', () => {
   const mm2c = mm => mm * CANVAS_SCALE;
 
   function redistRandom(people, rfs) {
+    // Build pools (respecting max-use counts) per field
+    const pools = {};
+    for (const rf of rfs) {
+      if (!rf.values.length) continue;
+      const hasLimits = rf.values.some(v => (rf.valueCounts?.[v] ?? 0) > 0);
+      if (hasLimits) {
+        const pool = [];
+        for (const v of rf.values) {
+          const cnt = rf.valueCounts?.[v] ?? 0;
+          for (let i = 0; i < (cnt > 0 ? cnt : 1); i++) pool.push(v);
+        }
+        // Fisher-Yates shuffle
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        pools[rf.id] = { pool, idx: 0, limited: true };
+      } else {
+        pools[rf.id] = { pool: rf.values, idx: 0, limited: false };
+      }
+    }
     return people.map(p => {
       const a = {};
       for (const rf of rfs) {
-        if (rf.values.length > 0) a[rf.id] = rf.values[Math.floor(Math.random() * rf.values.length)];
+        if (!rf.values.length) continue;
+        if (p.lockedAssignments?.[rf.id]) {
+          a[rf.id] = p.randomAssignments?.[rf.id]; // preserve locked
+          continue;
+        }
+        const entry = pools[rf.id];
+        if (entry.limited) {
+          a[rf.id] = entry.pool[entry.idx % entry.pool.length];
+          entry.idx++;
+        } else {
+          a[rf.id] = rf.values[Math.floor(Math.random() * rf.values.length)];
+        }
       }
-      return { ...p, randomAssignments: a };
+      return { ...p, randomAssignments: { ...(p.randomAssignments || {}), ...a } };
     });
   }
 
@@ -216,12 +252,39 @@ window.addEventListener('load', () => {
 
   function SetupStep({ design, onChange, onNext }) {
     const fileRef = useRef(null);
+    const [sizeNote, setSizeNote] = useState(null);
 
     function handleImage(e) {
       const file = e.target.files?.[0];
       if (!file) return;
       const r = new FileReader();
-      r.onload = ev => onChange({ ...design, backgroundImage: ev.target.result });
+      r.onload = ev => {
+        const dataUrl = ev.target.result;
+        const img = new window.Image();
+        img.onload = () => {
+          const W = img.naturalWidth, H = img.naturalHeight;
+          const aspect = W / H;
+          // Try to match a preset by aspect ratio (within 8%)
+          let best = null, bestDiff = Infinity;
+          for (const p of PRESETS) {
+            const diff = Math.abs(p.w / p.h - aspect);
+            if (diff < bestDiff) { bestDiff = diff; best = p; }
+          }
+          let width, height, note;
+          if (bestDiff < 0.08) {
+            width = best.w; height = best.h;
+            note = `Matched preset: ${best.label} (${best.w}×${best.h}mm)`;
+          } else {
+            // Fall back to 96 DPI pixel → mm, clamped to sensible range
+            width  = Math.round(Math.min(Math.max(W * 25.4 / 96, 40), 300));
+            height = Math.round(Math.min(Math.max(H * 25.4 / 96, 40), 400));
+            note = `Estimated from image size at 96 dpi (${width}×${height}mm)`;
+          }
+          setSizeNote(note);
+          onChange({ ...design, backgroundImage: dataUrl, width, height });
+        };
+        img.src = dataUrl;
+      };
       r.readAsDataURL(file);
     }
 
@@ -248,9 +311,10 @@ window.addEventListener('load', () => {
                 )
           ),
           h('input', { ref: fileRef, type: 'file', accept: 'image/*', onChange: handleImage, hidden: true }),
+          sizeNote && h('p', { className: 'hint', style: { marginTop: '6px' } }, '⟳ ' + sizeNote),
           design.backgroundImage && h('button', {
             className: 'bg2 sm',
-            onClick: () => onChange({ ...design, backgroundImage: null })
+            onClick: () => { onChange({ ...design, backgroundImage: null }); setSizeNote(null); }
           }, 'Remove image')
         ),
         h('div', { className: 'sc3' },
@@ -298,6 +362,7 @@ window.addEventListener('load', () => {
     const [bgImg, setBgImg] = useState(null);
     const [selId, setSelId] = useState(null);
     const [editRf, setEditRf] = useState(null);
+    const [zoom, setZoom] = useState(1);
     const containerRef = useRef(null);
     const stageRef = useRef(null);
     const layerRef = useRef(null);
@@ -307,6 +372,8 @@ window.addEventListener('load', () => {
     const upFRef = useRef(null);
     const bgRectRef = useRef(null);
     const bgImgNodeRef = useRef(null);
+    const rfCsvRef = useRef(null);
+    const rfCsvTargetRef = useRef(null);
     const cW = mm2c(design.width);
     const cH = mm2c(design.height);
 
@@ -352,8 +419,9 @@ window.addEventListener('load', () => {
       if (!stage || !layer || !tr) return;
       selIdRef.current = selId;
       upFRef.current = upF;
-      stage.width(cW);
-      stage.height(cH);
+      stage.width(cW * zoom);
+      stage.height(cH * zoom);
+      stage.scale({ x: zoom, y: zoom });
       bgRectRef.current?.destroy();
       bgImgNodeRef.current?.destroy();
       Object.values(nodeMapRef.current).forEach(n => n.destroy());
@@ -389,7 +457,7 @@ window.addEventListener('load', () => {
       tr.moveToTop();
       tr.nodes(selId && nodeMapRef.current[selId] ? [nodeMapRef.current[selId]] : []);
       layer.batchDraw();
-    }, [design, bgImg, selId, cW, cH]);
+    }, [design, bgImg, selId, cW, cH, zoom]);
 
     const selField = design.fields.find(f => f.id === selId) ?? null;
 
@@ -407,7 +475,7 @@ window.addEventListener('load', () => {
 
     function addField(type) {
       if (type === 'random') {
-        const rf = { id: uid(), label: 'Random Field', values: [] };
+        const rf = { id: uid(), label: 'Random Field', values: [], valueCounts: {} };
         onChange({
           ...design,
           randomFields: [...design.randomFields, rf],
@@ -433,6 +501,26 @@ window.addEventListener('load', () => {
 
     function upRf(id, patch) {
       onChange({ ...design, randomFields: design.randomFields.map(r => r.id === id ? { ...r, ...patch } : r) });
+    }
+
+    function handleRfCsv(e) {
+      const file = e.target.files?.[0];
+      if (!file || !rfCsvTargetRef.current) return;
+      const rfId = rfCsvTargetRef.current;
+      Papa.parse(file, {
+        complete: result => {
+          const values = [], valueCounts = {};
+          for (const row of result.data) {
+            const v = String(row[0] ?? '').trim();
+            if (!v) continue;
+            if (!values.includes(v)) values.push(v);
+            const cnt = parseInt(row[1]);
+            if (!isNaN(cnt) && cnt > 0) valueCounts[v] = cnt;
+          }
+          upRf(rfId, { values, valueCounts });
+        }
+      });
+      e.target.value = '';
     }
 
     function getDisplay(f) {
@@ -480,15 +568,48 @@ window.addEventListener('load', () => {
                 h('label', null, h('span', null, 'Field Label'),
                   h('input', { value: rf.label, onChange: e => upRf(rf.id, { label: e.target.value }), placeholder: 'e.g. Team Color' })
                 ),
-                h('label', null, h('span', null, 'Values (one per line)'),
-                  h('textarea', {
-                    rows: 5,
-                    value: rf.values.join('\n'),
-                    onChange: e => upRf(rf.id, { values: e.target.value.split('\n').map(v => v.trim()).filter(Boolean) }),
-                    placeholder: 'Red Team\nBlue Team\nGreen Team'
-                  })
-                ),
-                h('span', { className: 'hint' }, `${rf.values.length} values defined`)
+                h('div', { className: 'fe' },
+                  h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' } },
+                    h('h4', null, `Values (${rf.values.length})`),
+                    h('button', { className: 'bg2 sm', onClick: () => { rfCsvTargetRef.current = rf.id; rfCsvRef.current?.click(); } }, '⬆ CSV')
+                  ),
+                  rf.values.length > 0 && h('div', { style: { display: 'flex', gap: '3px', marginBottom: '2px' } },
+                    h('span', { style: { flex: 1, fontSize: '10px', color: 'var(--dim)' } }, 'Value'),
+                    h('span', { style: { width: '50px', fontSize: '10px', color: 'var(--dim)', textAlign: 'center' } }, 'Max uses'),
+                    h('span', { style: { width: '18px' } })
+                  ),
+                  h('div', { style: { display: 'flex', flexDirection: 'column', gap: '3px' } },
+                    ...rf.values.map((v, i) =>
+                      h('div', { key: i, className: 'rfvrow' },
+                        h('input', {
+                          style: { flex: 1, fontSize: '12px' },
+                          value: v,
+                          placeholder: 'Value',
+                          onChange: e => {
+                            const nv = e.target.value;
+                            const newValues = rf.values.map((x, j) => j === i ? nv : x);
+                            const newCounts = { ...(rf.valueCounts || {}) };
+                            if (newCounts[v] !== undefined) { newCounts[nv] = newCounts[v]; delete newCounts[v]; }
+                            upRf(rf.id, { values: newValues, valueCounts: newCounts });
+                          }
+                        }),
+                        h('input', {
+                          type: 'number', min: 0,
+                          value: rf.valueCounts?.[v] ?? 0,
+                          title: '0 = unlimited',
+                          onChange: e => upRf(rf.id, { valueCounts: { ...(rf.valueCounts || {}), [v]: +e.target.value } })
+                        }),
+                        h('button', { className: 'rb', onClick: () => {
+                          const newCounts = { ...(rf.valueCounts || {}) };
+                          delete newCounts[v];
+                          upRf(rf.id, { values: rf.values.filter((_, j) => j !== i), valueCounts: newCounts });
+                        } }, '×')
+                      )
+                    )
+                  ),
+                  h('button', { className: 'bo sm', style: { marginTop: '4px' }, onClick: () => upRf(rf.id, { values: [...rf.values, ''] }) }, '+ Add Value'),
+                  h('p', { className: 'hint' }, 'Max uses: 0 = unlimited. CSV format: value, count (optional).')
+                )
               )
             )
           ),
@@ -513,8 +634,13 @@ window.addEventListener('load', () => {
         ),
         // Canvas
         h('div', { className: 'cw' },
-          h('div', { className: 'cl' }, `${design.width}×${design.height}mm — Live Preview`),
-          h('div', { ref: containerRef, className: 'cc', style: { width: cW, height: cH } })
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' } },
+            h('div', { className: 'cl', style: { flex: 1 } }, `${design.width}×${design.height}mm — Live Preview`),
+            h('button', { className: 'bg2 sm', onClick: () => setZoom(z => Math.max(0.25, +((z - 0.25).toFixed(2)))), disabled: zoom <= 0.25 }, '−'),
+            h('button', { className: 'bg2 sm', style: { minWidth: '46px', textAlign: 'center' }, onClick: () => setZoom(1) }, `${Math.round(zoom * 100)}%`),
+            h('button', { className: 'bg2 sm', onClick: () => setZoom(z => Math.min(3, +((z + 0.25).toFixed(2)))), disabled: zoom >= 3 }, '+')
+          ),
+          h('div', { ref: containerRef, className: 'cc', style: { width: cW * zoom, height: cH * zoom } })
         ),
         // Right sidebar — field style
         h('div', { className: 'dsi' },
@@ -575,7 +701,8 @@ window.addEventListener('load', () => {
           !canGo && h('span', { className: 'hint' }, 'Add a Name field to continue'),
           h('button', { className: 'bp', disabled: !canGo, onClick: onNext }, 'Continue to Names →')
         )
-      )
+      ),
+      h('input', { ref: rfCsvRef, type: 'file', accept: '.csv,text/csv', onChange: handleRfCsv, hidden: true })
     );
   }
 
@@ -612,7 +739,8 @@ window.addEventListener('load', () => {
           id: uid(),
           name: r[csv.nc]?.trim() ?? '',
           title: csv.tc >= 0 ? r[csv.tc]?.trim() || undefined : undefined,
-          randomAssignments: {}
+          randomAssignments: {},
+          lockedAssignments: {}
         }));
       onChange(redistRandom([...people, ...imported], design.randomFields));
       setCsv(null);
@@ -620,7 +748,7 @@ window.addEventListener('load', () => {
 
     function addPerson() {
       if (!nm.trim()) return;
-      const p = { id: uid(), name: nm.trim(), title: nt.trim() || undefined, randomAssignments: {} };
+      const p = { id: uid(), name: nm.trim(), title: nt.trim() || undefined, randomAssignments: {}, lockedAssignments: {} };
       onChange(redistRandom([...people, p], design.randomFields));
       setNm(''); setNt('');
     }
@@ -628,6 +756,30 @@ window.addEventListener('load', () => {
     function upP(id, patch) {
       onChange(people.map(p => p.id === id ? { ...p, ...patch } : p));
     }
+
+    function toggleLock(personId, rfId) {
+      onChange(people.map(p => {
+        if (p.id !== personId) return p;
+        const locked = { ...(p.lockedAssignments || {}) };
+        if (locked[rfId]) delete locked[rfId]; else locked[rfId] = true;
+        return { ...p, lockedAssignments: locked };
+      }));
+    }
+
+    function reshuffleField(rfId) {
+      const rf = design.randomFields.find(r => r.id === rfId);
+      if (!rf || !rf.values.length) return;
+      onChange(redistRandom(people, [rf]));
+    }
+
+    // Auto-assign any fields that now have values but people are missing assignments
+    useEffect(() => {
+      if (!people.length) return;
+      const missing = design.randomFields.filter(rf =>
+        rf.values.length > 0 && people.some(p => p.randomAssignments?.[rf.id] === undefined)
+      );
+      if (missing.length > 0) onChange(redistRandom(people, missing));
+    }, [design.randomFields.map(rf => rf.id + ':' + rf.values.length).join(',')]);
 
     return h('div', { className: 'sc2' },
       h('div', { className: 'sh' }, h('h2', null, 'Guest List'), h('p', null, 'Import from CSV or add names manually.')),
@@ -686,8 +838,17 @@ window.addEventListener('load', () => {
           ),
           design.randomFields.length > 0 && people.length > 0 && h('div', { className: 'ss' },
             h('h4', null, 'Random Assignments'),
-            h('p', { className: 'hint' }, 'Reshuffle to randomize all assignments.'),
-            h('button', { className: 'bo sm', onClick: () => onChange(redistRandom(people, design.randomFields)) }, '↺ Reshuffle All')
+            ...design.randomFields.map(rf => {
+              const assigned = people.filter(p => p.randomAssignments?.[rf.id] !== undefined).length;
+              return h('div', { key: rf.id, style: { display: 'flex', flexDirection: 'column', gap: '4px', padding: '6px 0', borderBottom: '1px solid var(--border)' } },
+                h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
+                  h('span', { style: { fontSize: '12px', color: 'var(--text)' } }, `✦ ${rf.label}`),
+                  h('button', { className: 'bg2 sm', onClick: () => reshuffleField(rf.id) }, '↺')
+                ),
+                h('span', { className: 'hint' }, rf.values.length === 0 ? 'No values defined yet.' : `${assigned}/${people.length} assigned · ${rf.values.length} values`)
+              );
+            }),
+            h('button', { className: 'bo sm', style: { marginTop: '4px' }, onClick: () => onChange(redistRandom(people, design.randomFields)) }, '↺ Reshuffle All')
           )
         ),
         // People list
@@ -711,8 +872,14 @@ window.addEventListener('load', () => {
                         onChange: e => upP(p.id, { title: e.target.value || undefined })
                       }),
                       ...design.randomFields.map(rf =>
-                        h('span', { key: rf.id, className: 'rba' },
-                          `${rf.label}: `, h('strong', null, p.randomAssignments[rf.id] ?? '—')
+                        h('span', { key: rf.id, className: 'rba', style: p.lockedAssignments?.[rf.id] ? { borderColor: 'rgba(232,201,122,.55)', background: 'rgba(232,201,122,.1)' } : {} },
+                          `${rf.label}: `,
+                          h('strong', null, p.randomAssignments[rf.id] ?? '—'),
+                          h('button', {
+                            className: `lkbtn${p.lockedAssignments?.[rf.id] ? ' on' : ''}`,
+                            title: p.lockedAssignments?.[rf.id] ? 'Unlock' : 'Lock this assignment',
+                            onClick: e => { e.stopPropagation(); toggleLock(p.id, rf.id); }
+                          }, p.lockedAssignments?.[rf.id] ? '🔒' : '🔓')
                         )
                       )
                     ),
@@ -782,9 +949,11 @@ window.addEventListener('load', () => {
     const [cols, setCols] = useState(2);
     const [rows, setRows] = useState(4);
     const [copies, setCopies] = useState(1);
+    const [gap, setGap] = useState(4);
+    const [margin, setMargin] = useState(8);
     const [crop, setCrop] = useState(true);
     const [gen, setGen] = useState(false);
-    const [prevUrl, setPrevUrl] = useState(null);
+    const [pagePreviewUrl, setPagePreviewUrl] = useState(null);
     const [bgImg, setBgImg] = useState(null);
 
     useEffect(() => {
@@ -795,15 +964,60 @@ window.addEventListener('load', () => {
     }, [design.backgroundImage]);
 
     useEffect(() => {
-      if (!people.length || !bgImg) return;
-      renderCard(design, people[0], bgImg, 2).then(c => setPrevUrl(c.toDataURL()));
-    }, [design, people, bgImg]);
+      if (!people.length) { setPagePreviewUrl(null); return; }
+      let cancelled = false;
+      (async () => {
+        const PX = 2.0;
+        const pw = Math.round(page.w * PX), ph = Math.round(page.h * PX);
+        const canvas = document.createElement('canvas');
+        canvas.width = pw; canvas.height = ph;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, pw, ph);
+        const mgn = margin*PX, gp = gap*PX;
+        const avW = pw - 2*mgn, avH = ph - 2*mgn;
+        const cellW = (avW - gp*(cols-1))/cols;
+        const cellH = (avH - gp*(rows-1))/rows;
+        const fitScale = Math.min(cellW/(design.width*PX), cellH/(design.height*PX));
+        const cW = design.width*PX*fitScale, cH = design.height*PX*fitScale;
+        const cardRenderScale = cW / MM2PX(design.width);
+        const cards = [];
+        for (const p of people) for (let c = 0; c < copies; c++) cards.push(p);
+        let col = 0, row = 0;
+        for (const person of cards) {
+          if (cancelled) return;
+          const x = mgn + col*(cellW+gp);
+          const y = mgn + row*(cellH+gp);
+          const ox = x + (cellW-cW)/2, oy = y + (cellH-cH)/2;
+          if (bgImg) {
+            const cc = await renderCard(design, person, bgImg, cardRenderScale);
+            if (cancelled) return;
+            ctx.drawImage(cc, ox, oy, cW, cH);
+          } else {
+            ctx.fillStyle = '#333';
+            ctx.fillRect(ox, oy, cW, cH);
+          }
+          if (crop) {
+            ctx.strokeStyle = '#bbb'; ctx.lineWidth = 0.5;
+            [[ox,oy],[ox+cW,oy],[ox,oy+cH],[ox+cW,oy+cH]].forEach(([cx,cy]) => {
+              const ir = cx > ox, ib = cy > oy, d=2*PX, l=5*PX;
+              ctx.beginPath(); ctx.moveTo(cx+(ir?d:-d),cy); ctx.lineTo(cx+(ir?l:-l),cy); ctx.stroke();
+              ctx.beginPath(); ctx.moveTo(cx,cy+(ib?d:-d)); ctx.lineTo(cx,cy+(ib?l:-l)); ctx.stroke();
+            });
+          }
+          col++;
+          if (col >= cols) { col=0; row++; }
+          if (row >= rows) break;
+        }
+        if (!cancelled) setPagePreviewUrl(canvas.toDataURL());
+      })();
+      return () => { cancelled = true; };
+    }, [page, cols, rows, copies, gap, margin, crop, design, people, bgImg]);
 
     async function genPDF() {
       setGen(true);
       const { jsPDF } = window.jspdf;
       const pdf = new jsPDF({ orientation: page.h > page.w ? 'portrait' : 'landscape', unit: 'mm', format: [page.w, page.h] });
-      const margin = 8, gap = 4;
       const avW = page.w - margin * 2, avH = page.h - margin * 2;
       const cellW = (avW - gap * (cols - 1)) / cols;
       const cellH = (avH - gap * (rows - 1)) / rows;
@@ -870,6 +1084,12 @@ window.addEventListener('load', () => {
               ),
               h('label', null, h('span', null, 'Copies per person'),
                 h('input', { type: 'number', min: 1, max: 20, value: copies, onChange: e => setCopies(+e.target.value) })
+              ),
+              h('label', null, h('span', null, 'Gap between cards (mm)'),
+                h('input', { type: 'number', min: 0, max: 30, value: gap, onChange: e => setGap(Math.max(0, +e.target.value)) })
+              ),
+              h('label', null, h('span', null, 'Page margin (mm)'),
+                h('input', { type: 'number', min: 0, max: 30, value: margin, onChange: e => setMargin(Math.max(0, +e.target.value)) })
               )
             )
           ),
@@ -891,11 +1111,11 @@ window.addEventListener('load', () => {
           )
         ),
         h('div', { className: 'xprev' },
-          h('h4', null, 'Card Preview'),
-          prevUrl
-            ? h('img', { src: prevUrl, className: 'pi', alt: 'Preview' })
-            : h('div', { className: 'pp' }, 'Loading preview…'),
-          people.length > 0 && h('p', { className: 'hint' }, `Showing: ${people[0]?.name}`)
+          h('h4', null, 'Page Preview'),
+          h('p', { className: 'hint', style: { marginBottom: '8px' } }, 'First page layout preview.'),
+          pagePreviewUrl
+            ? h('img', { src: pagePreviewUrl, className: 'pi', alt: 'Page Preview' })
+            : h('div', { className: 'pp' }, people.length ? 'Generating…' : 'Add people to preview.')
         )
       ),
       h('div', { className: 'sf' },
