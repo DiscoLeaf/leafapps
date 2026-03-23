@@ -274,6 +274,10 @@
 
   <!-- History -->
   <div id="tab-history" class="tab-panel gap-col-sm">
+    <div style="display:flex;justify-content:flex-end">
+      <button class="btn-ghost" onclick="document.getElementById('csv-file-input').click()" title="Import bank CSV">⬆ Import CSV</button>
+      <input id="csv-file-input" type="file" accept=".csv,text/csv" hidden onchange="handleCSVImport(this.files[0]);this.value=''">
+    </div>
     <div class="card">
       <div class="section-head"><div class="lbl">Weekly overview</div></div>
       <div id="weekly-chart" style="display:flex;gap:3px;align-items:flex-end;height:60px"></div>
@@ -1446,6 +1450,78 @@ sb.auth.onAuthStateChange(async (event, session) => {
     currentUser = null;
   }
 });
+
+// ── CSV Import ────────────────────────────────────────────────────────────────
+function parseSwedishCSV(text) {
+  const lines = text.split(/\r?\n/);
+  // Row 0 = metadata (skip), Row 1 = headers
+  if (lines.length < 2) return [];
+  const headers = lines[1].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+  const ci = {
+    dag:  headers.findIndex(h => h === 'Transaktionsdag'),
+    desc: headers.findIndex(h => h === 'Beskrivning'),
+    amt:  headers.findIndex(h => h === 'Belopp'),
+  };
+  if (ci.dag < 0 || ci.desc < 0 || ci.amt < 0) {
+    toast('CSV missing required columns (Transaktionsdag, Beskrivning, Belopp)');
+    return null;
+  }
+  const results = [];
+  for (let i = 2; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
+    // Split on commas but respect quoted fields
+    const cols = [];
+    let cur = '', inQ = false;
+    for (const ch of line) {
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { cols.push(cur); cur = ''; }
+      else { cur += ch; }
+    }
+    cols.push(cur);
+    const dag  = (cols[ci.dag]  ?? '').trim().replace(/^"|"$/g, '');
+    const desc = (cols[ci.desc] ?? '').trim().replace(/^"|"$/g, '');
+    const raw  = (cols[ci.amt]  ?? '').trim().replace(/^"|"$/g, '');
+    if (!dag && !desc && !raw) continue;
+    const belopp = parseFloat(raw);
+    results.push({ transaktionsdag: dag, beskrivning: desc, belopp: isNaN(belopp) ? 0 : belopp });
+  }
+  return results;
+}
+
+function handleCSVImport(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const rows = parseSwedishCSV(e.target.result);
+    if (!rows) return;
+    let added = 0, skipped = 0;
+    for (const row of rows) {
+      if (!row.transaktionsdag || !row.beskrivning) { skipped++; continue; }
+      const type   = row.belopp >= 0 ? 'income' : 'expense';
+      const amount = Math.abs(row.belopp);
+      // Skip duplicate: same date + desc + amount already in state
+      const isDup = state.transactions.some(t =>
+        t.date === row.transaktionsdag && t.desc === row.beskrivning && t.amount === amount
+      );
+      if (isDup) { skipped++; continue; }
+      state.transactions.push({
+        id: gid(),
+        type,
+        amount,
+        tag: autoTag(row.beskrivning),
+        desc: row.beskrivning,
+        date: row.transaktionsdag,
+        recurring: false,
+        currency: state.settings.currency,
+      });
+      added++;
+    }
+    save(); renderAll();
+    toast(`Imported ${added} transaction${added !== 1 ? 's' : ''}${skipped ? ` · ${skipped} skipped` : ''}`);
+  };
+  reader.readAsText(file, 'latin1');
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
