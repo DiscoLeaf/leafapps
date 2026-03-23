@@ -872,12 +872,18 @@ window.addEventListener('load', () => {
                         onChange: e => upP(p.id, { title: e.target.value || undefined })
                       }),
                       ...design.randomFields.map(rf =>
-                        h('span', { key: rf.id, className: 'rba', style: p.lockedAssignments?.[rf.id] ? { borderColor: 'rgba(232,201,122,.55)', background: 'rgba(232,201,122,.1)' } : {} },
-                          `${rf.label}: `,
-                          h('strong', null, p.randomAssignments[rf.id] ?? '—'),
+                        h('div', { key: rf.id, style: { display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 } },
+                          h('input', {
+                            className: 'pti',
+                            type: 'text',
+                            value: p.randomAssignments?.[rf.id] ?? '',
+                            placeholder: rf.label,
+                            style: p.lockedAssignments?.[rf.id] ? { borderColor: 'rgba(232,201,122,.5)', background: 'rgba(232,201,122,.06)' } : {},
+                            onChange: e => upP(p.id, { randomAssignments: { ...(p.randomAssignments || {}), [rf.id]: e.target.value || undefined } })
+                          }),
                           h('button', {
                             className: `lkbtn${p.lockedAssignments?.[rf.id] ? ' on' : ''}`,
-                            title: p.lockedAssignments?.[rf.id] ? 'Unlock' : 'Lock this assignment',
+                            title: p.lockedAssignments?.[rf.id] ? 'Unlock' : 'Lock',
                             onClick: e => { e.stopPropagation(); toggleLock(p.id, rf.id); }
                           }, p.lockedAssignments?.[rf.id] ? '🔒' : '🔓')
                         )
@@ -1027,10 +1033,9 @@ window.addEventListener('load', () => {
       const cards = [];
       for (const p of people) for (let c = 0; c < copies; c++) cards.push(p);
 
-      let col = 0, row = 0, first = true;
+      let col = 0, row = 0, needsNewPage = false;
       for (const person of cards) {
-        if (col === 0 && row === 0 && !first) pdf.addPage();
-        first = false;
+        if (needsNewPage) { pdf.addPage(); needsNewPage = false; }
         const x = margin + col * (cellW + gap);
         const y = margin + row * (cellH + gap);
         const ox = x + (cellW - cW) / 2, oy = y + (cellH - cH) / 2;
@@ -1046,7 +1051,7 @@ window.addEventListener('load', () => {
         }
         col++;
         if (col >= cols) { col = 0; row++; }
-        if (row >= rows) { col = 0; row = 0; first = true; }
+        if (row >= rows) { col = 0; row = 0; needsNewPage = true; }
       }
       pdf.save('nametags.pdf');
       setGen(false);
