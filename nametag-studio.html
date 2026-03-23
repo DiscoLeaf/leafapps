@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Nametag Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/konva@9/konva.min.js"></script>
+<script src="https://unpkg.com/react-konva@18.2.10/ReactKonva.js"></script>
+<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e0e10;--bg2:#161618;--bg3:#1e1e22;--bg4:#252529;
+  --border:rgba(255,255,255,0.08);--border-h:rgba(255,255,255,0.18);
+  --text:#f0ede8;--dim:rgba(240,237,232,0.45);--mid:rgba(240,237,232,0.7);
+  --accent:#e8c97a;--accent-d:rgba(232,201,122,0.13);--accent-h:#f0d68e;
+  --danger:#e87a7a;--r:8px;--rl:14px;
+  --fd:'Playfair Display',Georgia,serif;--fb:'DM Sans',system-ui,sans-serif;
+}
+html,body,#root{height:100%;background:var(--bg);color:var(--text);font-family:var(--fb);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.app{display:flex;flex-direction:column;min-height:100vh}
+/* Header */
+.hd{display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:60px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:9px;font-family:var(--fd);font-size:19px;font-weight:700}
+.logo-i{color:var(--accent);font-size:20px}
+.logo em{font-style:italic;color:var(--accent)}
+/* Steps */
+.si{display:flex;align-items:center;gap:0}
+.sb{display:flex;align-items:center;gap:6px;padding:5px 12px;background:none;border:1px solid transparent;border-radius:var(--r);color:var(--dim);font-family:var(--fb);font-size:13px;cursor:pointer;transition:all .15s}
+.sb:hover:not(:disabled){color:var(--text);border-color:var(--border);background:var(--bg3)}
+.sb.active{color:var(--accent);border-color:rgba(232,201,122,0.3);background:var(--accent-d)}
+.sb.done:not(.active){color:var(--mid)}
+.sb:disabled{cursor:default;opacity:.35}
+.sc{width:20px;height:1px;background:var(--border);margin:0 2px}
+.sc.done{background:rgba(232,201,122,0.3)}
+/* Main */
+.main{flex:1;overflow-y:auto}
+/* Step content */
+.sc2{max-width:1200px;margin:0 auto;padding:36px 28px;display:flex;flex-direction:column;gap:28px;min-height:calc(100vh - 60px)}
+.sh h2{font-family:var(--fd);font-size:26px;font-weight:700;margin-bottom:5px}
+.sh p{color:var(--dim);font-size:14px}
+/* Buttons */
+.bp{display:inline-flex;align-items:center;gap:7px;padding:9px 20px;background:var(--accent);color:#1a1500;border:none;border-radius:var(--r);font-family:var(--fb);font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,transform .1s}
+.bp:hover:not(:disabled){background:var(--accent-h)}
+.bp:active:not(:disabled){transform:scale(.98)}
+.bp:disabled{opacity:.4;cursor:not-allowed}
+.bg2{padding:9px 16px;background:none;border:1px solid var(--border);border-radius:var(--r);color:var(--mid);font-family:var(--fb);font-size:14px;cursor:pointer;transition:all .15s}
+.bg2:hover{border-color:var(--border-h);color:var(--text)}
+.bg2.sm{padding:5px 11px;font-size:13px}
+.bg2.danger:hover{border-color:var(--danger);color:var(--danger)}
+.bo{padding:8px 14px;background:none;border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--fb);font-size:13px;cursor:pointer;transition:all .15s;width:100%;text-align:center}
+.bo:hover{border-color:var(--accent);color:var(--accent)}
+.bo.sm{width:auto;padding:5px 11px}
+/* Footer */
+.sf{display:flex;align-items:center;justify-content:space-between;padding-top:20px;border-top:1px solid var(--border);margin-top:auto}
+.fr{display:flex;align-items:center;gap:12px}
+.hint{color:var(--dim);font-size:12px}
+/* Inputs */
+input[type=text],input[type=number],select,textarea{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--fb);font-size:13px;padding:7px 10px;outline:none;transition:border-color .15s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:rgba(232,201,122,.4)}
+label{display:flex;flex-direction:column;gap:4px}
+label>span{font-size:11px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+/* Sidebar sections */
+.ss{border:1px solid var(--border);border-radius:var(--rl);padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--bg2)}
+.ss h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+/* Setup */
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.sc3{border:1px solid var(--border);border-radius:var(--rl);padding:22px;background:var(--bg2);display:flex;flex-direction:column;gap:14px}
+.sc3 h3{font-family:var(--fd);font-size:15px}
+.dz{border:2px dashed var(--border);border-radius:var(--r);min-height:160px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;overflow:hidden;position:relative}
+.dz:hover{border-color:var(--accent);background:var(--accent-d)}
+.dz.has-img{border-style:solid;border-color:var(--border)}
+.dp{display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--dim)}
+.di{font-size:26px;color:var(--accent)}
+.bg-img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.pb{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:9px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);cursor:pointer;transition:all .15s;text-align:left;width:100%}
+.pb:hover{border-color:var(--border-h)}
+.pb.active{border-color:var(--accent);background:var(--accent-d)}
+.pn{font-size:13px;color:var(--text);font-weight:500}
+.ps{font-size:11px;color:var(--dim)}
+.di2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* Design */
+.dl{display:grid;grid-template-columns:230px 1fr 210px;gap:20px;align-items:start}
+.dsi{display:flex;flex-direction:column;gap:10px;position:sticky;top:76px;max-height:calc(100vh - 130px);overflow-y:auto}
+.cw{display:flex;flex-direction:column;align-items:center;gap:10px}
+.cl{font-size:11px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+.cc{border-radius:var(--r);overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06);cursor:default}
+.fab{display:flex;flex-direction:column;gap:5px}
+.fa{display:flex;align-items:center;gap:7px;padding:8px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:13px;cursor:pointer;transition:all .15s;width:100%}
+.fa:hover:not(:disabled){border-color:var(--accent);color:var(--accent);background:var(--accent-d)}
+.fa:disabled{opacity:.5;cursor:not-allowed}
+.ab{margin-left:auto;color:var(--accent);font-size:11px}
+.fl{display:flex;flex-direction:column;gap:4px}
+.fi{display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:var(--r);border:1px solid transparent;cursor:pointer;transition:all .12s;font-size:13px;color:var(--mid)}
+.fi:hover{background:var(--bg3);border-color:var(--border)}
+.fi.sel{background:var(--accent-d);border-color:rgba(232,201,122,.3);color:var(--accent)}
+.rb{margin-left:auto;background:none;border:none;color:var(--dim);cursor:pointer;font-size:15px;line-height:1;padding:0 2px;transition:color .12s}
+.rb:hover{color:var(--danger)}
+.re{border:1px solid var(--border);border-radius:var(--rl);padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--bg2)}
+.rh{display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:13px;color:var(--mid)}
+.rbody{display:flex;flex-direction:column;gap:8px;padding-top:2px}
+.fe{display:flex;flex-direction:column;gap:10px}
+.fe h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+.sg2{display:flex;flex-direction:column;gap:8px}
+.cr{display:flex;align-items:center;gap:8px}
+input[type=color]{width:34px;height:30px;padding:2px;border:1px solid var(--border);border-radius:5px;background:var(--bg3);cursor:pointer;flex-shrink:0}
+.ch{font-size:11px;color:var(--dim);font-family:monospace}
+.ab2,.st{display:flex;gap:4px}
+.ab2 button,.st button{flex:1;padding:6px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--mid);cursor:pointer;font-size:11px;transition:all .12s}
+.ab2 button:hover,.st button:hover{border-color:var(--border-h);color:var(--text)}
+.ab2 button.active,.st button.active{background:var(--accent-d);border-color:rgba(232,201,122,.4);color:var(--accent)}
+.ns{display:flex;flex-direction:column;align-items:center;gap:9px;padding:28px 14px;color:var(--dim);text-align:center;font-size:12px}
+.ns span{font-size:26px}
+/* Names */
+.nl{display:grid;grid-template-columns:270px 1fr;gap:20px;align-items:start}
+.nsi{display:flex;flex-direction:column;gap:10px;position:sticky;top:76px}
+.csv-s{display:flex;flex-direction:column;gap:8px;padding:8px;background:var(--bg3);border-radius:var(--r);font-size:12px}
+.csv-r{display:flex;gap:10px;color:var(--mid)}
+.ca{display:flex;gap:7px}
+.rba{font-size:11px;padding:2px 8px;background:var(--accent-d);border-radius:20px;color:var(--accent);border:1px solid rgba(232,201,122,.2);white-space:nowrap}
+.plw{display:flex;flex-direction:column;gap:7px}
+.plh{display:flex;align-items:center;justify-content:space-between;color:var(--dim);font-size:13px}
+.el{display:flex;flex-direction:column;align-items:center;gap:9px;padding:50px 20px;color:var(--dim);text-align:center;border:1px dashed var(--border);border-radius:var(--rl)}
+.el span{font-size:28px}
+.pl{display:flex;flex-direction:column;gap:5px}
+.pr{display:flex;align-items:center;gap:9px;padding:9px 11px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);transition:border-color .12s}
+.pr:hover{border-color:var(--border-h)}
+.pf{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap}
+.pni{font-weight:600;width:150px;flex-shrink:0}
+.pti{width:130px;flex-shrink:0;color:var(--mid)}
+/* Export */
+.xl{display:grid;grid-template-columns:270px 1fr;gap:28px;align-items:start}
+.xo{display:flex;flex-direction:column;gap:14px;position:sticky;top:76px}
+.gi{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.gi label:last-child{grid-column:1/-1}
+.tl{flex-direction:row!important;align-items:center!important;gap:9px!important;cursor:pointer;font-size:13px;color:var(--text)}
+input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+.xsum{gap:7px!important}
+.xsr{display:flex;justify-content:space-between;font-size:13px;color:var(--mid)}
+.xsr strong{color:var(--text)}
+.gbtn{width:100%;justify-content:center;font-size:15px;padding:12px}
+.xprev{display:flex;flex-direction:column;gap:12px}
+.xprev h4{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+.pi{max-width:100%;border-radius:var(--r);box-shadow:0 8px 40px rgba(0,0,0,.6);border:1px solid var(--border)}
+.pp{padding:40px;background:var(--bg2);border-radius:var(--r);color:var(--dim);text-align:center;border:1px solid var(--border)}
+/* Scrollbar */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
+@media(max-width:900px){.dl,.sg,.nl,.xl{grid-template-columns:1fr}.dsi{position:static}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// Wait for all scripts to load
+window.addEventListener('load', () => {
+  const { useState, useEffect, useRef, createElement: h, Fragment } = React;
+  const { createRoot } = ReactDOM;
+  const { Stage, Layer, Image: KImage, Text: KText, Transformer, Rect } = ReactKonva;
+
+  // ─── Utils ──────────────────────────────────────────
+  const MM2PX = mm => (mm / 25.4) * 96;
+  const uid = () => Math.random().toString(36).slice(2, 9);
+  const CANVAS_SCALE = 2.2;
+  const mm2c = mm => mm * CANVAS_SCALE;
+
+  function redistRandom(people, rfs) {
+    return people.map(p => {
+      const a = {};
+      for (const rf of rfs) {
+        if (rf.values.length > 0) a[rf.id] = rf.values[Math.floor(Math.random() * rf.values.length)];
+      }
+      return { ...p, randomAssignments: a };
+    });
+  }
+
+  // ─── Step Indicator ─────────────────────────────────
+  const STEPS = [
+    { id: 'setup', label: 'Setup', icon: '◈' },
+    { id: 'design', label: 'Design', icon: '✦' },
+    { id: 'names', label: 'Names', icon: '◎' },
+    { id: 'export', label: 'Export', icon: '⬡' },
+  ];
+
+  function StepIndicator({ current, onNav, done }) {
+    const ci = STEPS.findIndex(s => s.id === current);
+    return h('div', { className: 'si' },
+      ...STEPS.flatMap((s, i) => {
+        const isActive = s.id === current;
+        const isDone = done.has(s.id);
+        const ok = i <= ci || isDone;
+        const cls = ['sb', isActive && 'active', isDone && !isActive && 'done', !ok && 'locked'].filter(Boolean).join(' ');
+        return [
+          h('button', { key: s.id, className: cls, disabled: !ok, onClick: () => ok && onNav(s.id) },
+            h('span', null, s.icon),
+            h('span', null, s.label),
+            isDone && !isActive && h('span', { style: { color: 'var(--accent)', fontSize: '11px' } }, '✓')
+          ),
+          i < STEPS.length - 1 && h('div', { key: `c${i}`, className: `sc ${i < ci ? 'done' : ''}` })
+        ];
+      }).filter(Boolean)
+    );
+  }
+
+  // ─── Setup Step ─────────────────────────────────────
+  const PRESETS = [
+    { label: 'Business Card', w: 85, h: 55 },
+    { label: 'Name Badge', w: 100, h: 75 },
+    { label: 'Lanyard Badge', w: 90, h: 120 },
+    { label: 'Large Badge', w: 105, h: 148 },
+  ];
+
+  function SetupStep({ design, onChange, onNext }) {
+    const fileRef = useRef(null);
+
+    function handleImage(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const r = new FileReader();
+      r.onload = ev => onChange({ ...design, backgroundImage: ev.target.result });
+      r.readAsDataURL(file);
+    }
+
+    const ok = !!design.backgroundImage;
+
+    return h('div', { className: 'sc2' },
+      h('div', { className: 'sh' },
+        h('h2', null, 'Card Setup'),
+        h('p', null, 'Upload your background image and choose card dimensions.')
+      ),
+      h('div', { className: 'sg' },
+        h('div', { className: 'sc3' },
+          h('h3', null, 'Background Image'),
+          h('div', {
+            className: `dz ${design.backgroundImage ? 'has-img' : ''}`,
+            onClick: () => fileRef.current?.click()
+          },
+            design.backgroundImage
+              ? h('img', { src: design.backgroundImage, className: 'bg-img', alt: '' })
+              : h('div', { className: 'dp' },
+                  h('span', { className: 'di' }, '⬆'),
+                  h('span', null, 'Click to upload image'),
+                  h('span', { style: { fontSize: '11px' } }, 'PNG, JPG, SVG')
+                )
+          ),
+          h('input', { ref: fileRef, type: 'file', accept: 'image/*', onChange: handleImage, hidden: true }),
+          design.backgroundImage && h('button', {
+            className: 'bg2 sm',
+            onClick: () => onChange({ ...design, backgroundImage: null })
+          }, 'Remove image')
+        ),
+        h('div', { className: 'sc3' },
+          h('h3', null, 'Card Size'),
+          h('div', { className: 'presets' },
+            ...PRESETS.map(p =>
+              h('button', {
+                key: p.label,
+                className: `pb ${design.width === p.w && design.height === p.h ? 'active' : ''}`,
+                onClick: () => onChange({ ...design, width: p.w, height: p.h })
+              },
+                h('span', { className: 'pn' }, p.label),
+                h('span', { className: 'ps' }, `${p.w}×${p.h}mm`)
+              )
+            )
+          ),
+          h('div', { className: 'di2' },
+            h('label', null,
+              h('span', null, 'Width (mm)'),
+              h('input', { type: 'number', min: 40, max: 300, value: design.width,
+                onChange: e => onChange({ ...design, width: +e.target.value }) })
+            ),
+            h('label', null,
+              h('span', null, 'Height (mm)'),
+              h('input', { type: 'number', min: 40, max: 400, value: design.height,
+                onChange: e => onChange({ ...design, height: +e.target.value }) })
+            )
+          )
+        )
+      ),
+      h('div', { className: 'sf' },
+        h('span'),
+        h('div', { className: 'fr' },
+          !ok && h('span', { className: 'hint' }, 'Upload a background image to continue'),
+          h('button', { className: 'bp', disabled: !ok, onClick: onNext }, 'Continue to Design →')
+        )
+      )
+    );
+  }
+
+  // ─── Design Step ────────────────────────────────────
+  const FONTS = ['Playfair Display', 'DM Sans', 'Georgia', 'Arial', 'Courier New', 'Trebuchet MS', 'Verdana'];
+
+  function DesignStep({ design, onChange, onNext, onBack }) {
+    const [bgImg, setBgImg] = useState(null);
+    const [selId, setSelId] = useState(null);
+    const [editRf, setEditRf] = useState(null);
+    const trRef = useRef(null);
+    const nodeRefs = useRef({});
+    const cW = mm2c(design.width);
+    const cH = mm2c(design.height);
+
+    useEffect(() => {
+      if (!design.backgroundImage) return;
+      const img = new window.Image();
+      img.src = design.backgroundImage;
+      img.onload = () => setBgImg(img);
+    }, [design.backgroundImage]);
+
+    useEffect(() => {
+      if (!trRef.current) return;
+      if (selId && nodeRefs.current[selId]) {
+        trRef.current.nodes([nodeRefs.current[selId]]);
+      } else {
+        trRef.current.nodes([]);
+      }
+      trRef.current.getLayer()?.batchDraw();
+    }, [selId]);
+
+    const selField = design.fields.find(f => f.id === selId) ?? null;
+
+    function mkField(type, randomFieldId) {
+      return {
+        id: uid(), type,
+        x: mm2c(design.width / 2 - 25), y: mm2c(design.height / 2 - 8),
+        fontSize: type === 'name' ? 22 : 14,
+        fontFamily: 'Playfair Display',
+        color: '#ffffff', bold: type === 'name', italic: false,
+        align: 'center', width: mm2c(50),
+        ...(randomFieldId ? { randomFieldId } : {})
+      };
+    }
+
+    function addField(type) {
+      if (type === 'random') {
+        const rf = { id: uid(), label: 'Random Field', values: [] };
+        onChange({
+          ...design,
+          randomFields: [...design.randomFields, rf],
+          fields: [...design.fields, mkField('random', rf.id)]
+        });
+        setEditRf(rf.id);
+      } else {
+        onChange({ ...design, fields: [...design.fields, mkField(type)] });
+      }
+    }
+
+    function upF(id, patch) {
+      onChange({ ...design, fields: design.fields.map(f => f.id === id ? { ...f, ...patch } : f) });
+    }
+
+    function removeF(id) {
+      const f = design.fields.find(x => x.id === id);
+      let rfs = design.randomFields;
+      if (f?.type === 'random' && f.randomFieldId) rfs = rfs.filter(r => r.id !== f.randomFieldId);
+      onChange({ ...design, fields: design.fields.filter(x => x.id !== id), randomFields: rfs });
+      if (selId === id) setSelId(null);
+    }
+
+    function upRf(id, patch) {
+      onChange({ ...design, randomFields: design.randomFields.map(r => r.id === id ? { ...r, ...patch } : r) });
+    }
+
+    function getDisplay(f) {
+      if (f.type === 'name') return 'Jane Smith';
+      if (f.type === 'title') return 'Lead Designer';
+      if (f.type === 'random') {
+        const rf = design.randomFields.find(r => r.id === f.randomFieldId);
+        return rf?.values[0] ?? rf?.label ?? 'Random';
+      }
+      return '';
+    }
+
+    const canGo = design.fields.some(f => f.type === 'name');
+
+    return h('div', { className: 'sc2', style: { maxWidth: '1400px' } },
+      h('div', { className: 'sh' },
+        h('h2', null, 'Design Your Card'),
+        h('p', null, 'Add text fields and drag them into position. Click to select and style.')
+      ),
+      h('div', { className: 'dl' },
+        // Left sidebar
+        h('div', { className: 'dsi' },
+          h('div', { className: 'ss' },
+            h('h4', null, 'Add Fields'),
+            h('div', { className: 'fab' },
+              h('button', {
+                className: 'fa', disabled: design.fields.some(f => f.type === 'name'),
+                onClick: () => addField('name')
+              }, '◎', ' Name', design.fields.some(f => f.type === 'name') && h('span', { className: 'ab' }, '✓')),
+              h('button', {
+                className: 'fa', disabled: design.fields.some(f => f.type === 'title'),
+                onClick: () => addField('title')
+              }, '◈', ' Title / Role', design.fields.some(f => f.type === 'title') && h('span', { className: 'ab' }, '✓')),
+              h('button', { className: 'fa', onClick: () => addField('random') }, '✦', ' Random Field')
+            )
+          ),
+          // Random field editors
+          ...design.randomFields.map(rf =>
+            h('div', { key: rf.id, className: 're' },
+              h('div', { className: 'rh', onClick: () => setEditRf(editRf === rf.id ? null : rf.id) },
+                h('span', null, `✦ ${rf.label}`),
+                h('span', null, editRf === rf.id ? '▲' : '▼')
+              ),
+              editRf === rf.id && h('div', { className: 'rbody' },
+                h('label', null, h('span', null, 'Field Label'),
+                  h('input', { value: rf.label, onChange: e => upRf(rf.id, { label: e.target.value }), placeholder: 'e.g. Team Color' })
+                ),
+                h('label', null, h('span', null, 'Values (one per line)'),
+                  h('textarea', {
+                    rows: 5,
+                    value: rf.values.join('\n'),
+                    onChange: e => upRf(rf.id, { values: e.target.value.split('\n').map(v => v.trim()).filter(Boolean) }),
+                    placeholder: 'Red Team\nBlue Team\nGreen Team'
+                  })
+                ),
+                h('span', { className: 'hint' }, `${rf.values.length} values defined`)
+              )
+            )
+          ),
+          // Field list
+          design.fields.length > 0 && h('div', { className: 'ss' },
+            h('h4', null, 'Fields on Card'),
+            h('div', { className: 'fl' },
+              ...design.fields.map(f => {
+                const rf = f.type === 'random' ? design.randomFields.find(r => r.id === f.randomFieldId) : null;
+                return h('div', {
+                  key: f.id,
+                  className: `fi ${selId === f.id ? 'sel' : ''}`,
+                  onClick: () => setSelId(f.id)
+                },
+                  h('span', null, f.type === 'name' ? '◎' : f.type === 'title' ? '◈' : '✦'),
+                  h('span', null, rf ? rf.label : f.type === 'name' ? 'Name' : 'Title / Role'),
+                  h('button', { className: 'rb', onClick: e => { e.stopPropagation(); removeF(f.id); } }, '×')
+                );
+              })
+            )
+          )
+        ),
+        // Canvas
+        h('div', { className: 'cw' },
+          h('div', { className: 'cl' }, `${design.width}×${design.height}mm — Live Preview`),
+          h('div', { className: 'cc', style: { width: cW, height: cH } },
+            h(Stage, { width: cW, height: cH, onMouseDown: e => { if (e.target === e.target.getStage()) setSelId(null); } },
+              h(Layer, null,
+                h(Rect, { width: cW, height: cH, fill: '#111', listening: false }),
+                bgImg && h(KImage, { image: bgImg, width: cW, height: cH, listening: false }),
+                ...design.fields.map(f =>
+                  h(KText, {
+                    key: f.id,
+                    ref: el => { if (el) nodeRefs.current[f.id] = el; },
+                    x: f.x, y: f.y,
+                    text: getDisplay(f),
+                    fontSize: f.fontSize,
+                    fontFamily: f.fontFamily,
+                    fill: f.color,
+                    fontStyle: [f.bold && 'bold', f.italic && 'italic'].filter(Boolean).join(' ') || 'normal',
+                    align: f.align,
+                    width: f.width,
+                    draggable: true,
+                    onClick: () => setSelId(f.id),
+                    onTap: () => setSelId(f.id),
+                    onDragEnd: e => upF(f.id, { x: e.target.x(), y: e.target.y() }),
+                    stroke: selId === f.id ? 'rgba(255,200,100,0.5)' : undefined,
+                    strokeWidth: selId === f.id ? 0.8 : 0
+                  })
+                ),
+                h(Transformer, {
+                  ref: trRef,
+                  enabledAnchors: ['middle-left', 'middle-right'],
+                  rotateEnabled: false,
+                  borderStroke: 'rgba(255,200,100,0.7)',
+                  anchorStroke: 'rgba(255,200,100,0.7)',
+                  anchorFill: 'rgba(255,200,100,0.9)',
+                  onTransformEnd: () => {
+                    if (!selId) return;
+                    const node = nodeRefs.current[selId];
+                    if (!node) return;
+                    upF(selId, { width: node.width() * node.scaleX(), x: node.x(), y: node.y() });
+                    node.scaleX(1);
+                  }
+                })
+              )
+            )
+          )
+        ),
+        // Right sidebar — field style
+        h('div', { className: 'dsi' },
+          selField
+            ? h('div', { className: 'ss' },
+                h('div', { className: 'fe' },
+                  h('h4', null, 'Style Field'),
+                  h('div', { className: 'sg2' },
+                    h('label', null, h('span', null, 'Font'),
+                      h('select', { value: selField.fontFamily, onChange: e => upF(selField.id, { fontFamily: e.target.value }) },
+                        ...FONTS.map(f => h('option', { key: f, value: f }, f))
+                      )
+                    ),
+                    h('label', null, h('span', null, 'Size (px)'),
+                      h('input', { type: 'number', min: 8, max: 120, value: selField.fontSize,
+                        onChange: e => upF(selField.id, { fontSize: +e.target.value }) })
+                    ),
+                    h('label', null, h('span', null, 'Color'),
+                      h('div', { className: 'cr' },
+                        h('input', { type: 'color', value: selField.color,
+                          onChange: e => upF(selField.id, { color: e.target.value }) }),
+                        h('span', { className: 'ch' }, selField.color)
+                      )
+                    ),
+                    h('label', null, h('span', null, 'Align'),
+                      h('div', { className: 'ab2' },
+                        ...['left', 'center', 'right'].map(a =>
+                          h('button', {
+                            key: a,
+                            className: selField.align === a ? 'active' : '',
+                            onClick: () => upF(selField.id, { align: a })
+                          }, a === 'left' ? '⬤·' : a === 'center' ? '·⬤·' : '·⬤')
+                        )
+                      )
+                    ),
+                    h('div', { className: 'st' },
+                      h('button', {
+                        className: selField.bold ? 'active' : '',
+                        onClick: () => upF(selField.id, { bold: !selField.bold })
+                      }, h('strong', null, 'B')),
+                      h('button', {
+                        className: selField.italic ? 'active' : '',
+                        onClick: () => upF(selField.id, { italic: !selField.italic })
+                      }, h('em', null, 'I'))
+                    )
+                  )
+                )
+              )
+            : h('div', { className: 'ns' },
+                h('span', null, '◎'),
+                h('p', null, 'Click a field on the card to edit its style')
+              )
+        )
+      ),
+      h('div', { className: 'sf' },
+        h('button', { className: 'bg2', onClick: onBack }, '← Back'),
+        h('div', { className: 'fr' },
+          !canGo && h('span', { className: 'hint' }, 'Add a Name field to continue'),
+          h('button', { className: 'bp', disabled: !canGo, onClick: onNext }, 'Continue to Names →')
+        )
+      )
+    );
+  }
+
+  // ─── Names Step ──────────────────────────────────────
+  function NamesStep({ design, people, onChange, onNext, onBack }) {
+    const [csv, setCsv] = useState(null);
+    const [nm, setNm] = useState('');
+    const [nt, setNt] = useState('');
+    const fileRef = useRef(null);
+    const hasTitle = design.fields.some(f => f.type === 'title');
+
+    function handleCsv(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      Papa.parse(file, {
+        complete: result => {
+          const data = result.data;
+          if (data.length < 2) return;
+          const headers = data[0];
+          const rows = data.slice(1).filter(r => r.some(c => c.trim()));
+          const ni = headers.findIndex(h => /name/i.test(h));
+          const ti = headers.findIndex(h => /title|role|position/i.test(h));
+          setCsv({ headers, rows, nc: ni >= 0 ? ni : 0, tc: ti >= 0 ? ti : -1 });
+        }
+      });
+      e.target.value = '';
+    }
+
+    function importCsv() {
+      if (!csv) return;
+      const imported = csv.rows
+        .filter(r => r[csv.nc]?.trim())
+        .map(r => ({
+          id: uid(),
+          name: r[csv.nc]?.trim() ?? '',
+          title: csv.tc >= 0 ? r[csv.tc]?.trim() || undefined : undefined,
+          randomAssignments: {}
+        }));
+      onChange(redistRandom([...people, ...imported], design.randomFields));
+      setCsv(null);
+    }
+
+    function addPerson() {
+      if (!nm.trim()) return;
+      const p = { id: uid(), name: nm.trim(), title: nt.trim() || undefined, randomAssignments: {} };
+      onChange(redistRandom([...people, p], design.randomFields));
+      setNm(''); setNt('');
+    }
+
+    function upP(id, patch) {
+      onChange(people.map(p => p.id === id ? { ...p, ...patch } : p));
+    }
+
+    return h('div', { className: 'sc2' },
+      h('div', { className: 'sh' }, h('h2', null, 'Guest List'), h('p', null, 'Import from CSV or add names manually.')),
+      h('div', { className: 'nl' },
+        // Sidebar
+        h('div', { className: 'nsi' },
+          h('div', { className: 'ss' },
+            h('h4', null, 'Import CSV'),
+            h('p', { className: 'hint' }, 'File should have a header row: Name, Title, Role…'),
+            h('button', { className: 'bo', onClick: () => fileRef.current?.click() }, '⬆ Upload CSV'),
+            h('input', { ref: fileRef, type: 'file', accept: '.csv,text/csv', onChange: handleCsv, hidden: true })
+          ),
+          csv && h('div', { className: 'ss' },
+            h('h4', null, 'Map Columns'),
+            h('label', null, h('span', null, 'Name column'),
+              h('select', { value: csv.nc, onChange: e => setCsv({ ...csv, nc: +e.target.value }) },
+                ...csv.headers.map((hh, i) => h('option', { key: i, value: i }, hh))
+              )
+            ),
+            hasTitle && h('label', null, h('span', null, 'Title column'),
+              h('select', { value: csv.tc, onChange: e => setCsv({ ...csv, tc: +e.target.value }) },
+                h('option', { value: -1 }, '— none —'),
+                ...csv.headers.map((hh, i) => h('option', { key: i, value: i }, hh))
+              )
+            ),
+            h('div', { className: 'csv-s' },
+              ...csv.rows.slice(0, 3).map((r, i) =>
+                h('div', { key: i, className: 'csv-r' },
+                  h('span', null, r[csv.nc]),
+                  hasTitle && csv.tc >= 0 && h('span', { style: { color: 'var(--dim)' } }, r[csv.tc])
+                )
+              ),
+              csv.rows.length > 3 && h('span', { className: 'hint' }, `+${csv.rows.length - 3} more`)
+            ),
+            h('div', { className: 'ca' },
+              h('button', { className: 'bp sm', onClick: importCsv, style: { padding: '6px 14px', fontSize: '13px' } },
+                `Import ${csv.rows.length}`),
+              h('button', { className: 'bg2 sm', onClick: () => setCsv(null) }, 'Cancel')
+            )
+          ),
+          h('div', { className: 'ss' },
+            h('h4', null, 'Add Manually'),
+            h('input', {
+              type: 'text', placeholder: 'Name', value: nm,
+              onChange: e => setNm(e.target.value),
+              onKeyDown: e => e.key === 'Enter' && addPerson(),
+              style: { marginBottom: '7px' }
+            }),
+            hasTitle && h('input', {
+              type: 'text', placeholder: 'Title / Role (optional)', value: nt,
+              onChange: e => setNt(e.target.value),
+              onKeyDown: e => e.key === 'Enter' && addPerson(),
+              style: { marginBottom: '7px' }
+            }),
+            h('button', { className: 'bo sm', onClick: addPerson, disabled: !nm.trim() }, '+ Add')
+          ),
+          design.randomFields.length > 0 && people.length > 0 && h('div', { className: 'ss' },
+            h('h4', null, 'Random Assignments'),
+            h('p', { className: 'hint' }, 'Reshuffle to randomize all assignments.'),
+            h('button', { className: 'bo sm', onClick: () => onChange(redistRandom(people, design.randomFields)) }, '↺ Reshuffle All')
+          )
+        ),
+        // People list
+        h('div', { className: 'plw' },
+          h('div', { className: 'plh' },
+            h('span', null, `${people.length} ${people.length === 1 ? 'person' : 'people'}`),
+            people.length > 0 && h('button', { className: 'bg2 sm danger', onClick: () => onChange([]) }, 'Clear all')
+          ),
+          people.length === 0
+            ? h('div', { className: 'el' }, h('span', null, '◎'), h('p', null, 'No guests yet — import a CSV or add manually'))
+            : h('div', { className: 'pl' },
+                ...people.map(p =>
+                  h('div', { key: p.id, className: 'pr' },
+                    h('div', { className: 'pf' },
+                      h('input', {
+                        className: 'pni', type: 'text', value: p.name, placeholder: 'Name',
+                        onChange: e => upP(p.id, { name: e.target.value })
+                      }),
+                      hasTitle && h('input', {
+                        className: 'pti', type: 'text', value: p.title ?? '', placeholder: 'Title',
+                        onChange: e => upP(p.id, { title: e.target.value || undefined })
+                      }),
+                      ...design.randomFields.map(rf =>
+                        h('span', { key: rf.id, className: 'rba' },
+                          `${rf.label}: `, h('strong', null, p.randomAssignments[rf.id] ?? '—')
+                        )
+                      )
+                    ),
+                    h('button', { className: 'rb', onClick: () => onChange(people.filter(x => x.id !== p.id)) }, '×')
+                  )
+                )
+              )
+        )
+      ),
+      h('div', { className: 'sf' },
+        h('button', { className: 'bg2', onClick: onBack }, '← Back'),
+        h('div', { className: 'fr' },
+          people.length === 0 && h('span', { className: 'hint' }, 'Add at least one person'),
+          h('button', { className: 'bp', disabled: people.length === 0, onClick: onNext }, 'Continue to Export →')
+        )
+      )
+    );
+  }
+
+  // ─── Export Step ────────────────────────────────────
+  const PAGE_SIZES = [
+    { label: 'A4', w: 210, h: 297 },
+    { label: 'Letter', w: 215.9, h: 279.4 },
+    { label: 'A3', w: 297, h: 420 },
+  ];
+
+  function renderCard(design, person, bgImg, scale = 3) {
+    return new Promise(resolve => {
+      const pxW = MM2PX(design.width) * scale;
+      const pxH = MM2PX(design.height) * scale;
+      const eW = design.width * 2.2;
+      const eH = design.height * 2.2;
+      const sx = pxW / eW, sy = pxH / eH;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = pxW; canvas.height = pxH;
+      const ctx = canvas.getContext('2d');
+
+      if (bgImg) { ctx.drawImage(bgImg, 0, 0, pxW, pxH); }
+      else { ctx.fillStyle = '#222'; ctx.fillRect(0, 0, pxW, pxH); }
+
+      for (const f of design.fields) {
+        let text = '';
+        if (f.type === 'name') text = person.name;
+        else if (f.type === 'title') text = person.title ?? '';
+        else if (f.type === 'random' && f.randomFieldId) text = person.randomAssignments[f.randomFieldId] ?? '';
+        if (!text) continue;
+
+        ctx.save();
+        const fs = f.fontSize * Math.min(sx, sy);
+        const style = [f.bold && 'bold', f.italic && 'italic'].filter(Boolean).join(' ') || 'normal';
+        ctx.font = `${style} ${fs}px "${f.fontFamily}", sans-serif`;
+        ctx.fillStyle = f.color;
+        ctx.textBaseline = 'top';
+        const x = f.x * sx, y = f.y * sy, w = f.width * sx;
+        if (f.align === 'center') { ctx.textAlign = 'center'; ctx.fillText(text, x + w / 2, y); }
+        else if (f.align === 'right') { ctx.textAlign = 'right'; ctx.fillText(text, x + w, y); }
+        else { ctx.textAlign = 'left'; ctx.fillText(text, x, y); }
+        ctx.restore();
+      }
+      resolve(canvas);
+    });
+  }
+
+  function ExportStep({ design, people, onBack }) {
+    const [page, setPage] = useState(PAGE_SIZES[0]);
+    const [cols, setCols] = useState(2);
+    const [rows, setRows] = useState(4);
+    const [copies, setCopies] = useState(1);
+    const [crop, setCrop] = useState(true);
+    const [gen, setGen] = useState(false);
+    const [prevUrl, setPrevUrl] = useState(null);
+    const [bgImg, setBgImg] = useState(null);
+
+    useEffect(() => {
+      if (!design.backgroundImage) return;
+      const img = new window.Image();
+      img.src = design.backgroundImage;
+      img.onload = () => setBgImg(img);
+    }, [design.backgroundImage]);
+
+    useEffect(() => {
+      if (!people.length || !bgImg) return;
+      renderCard(design, people[0], bgImg, 2).then(c => setPrevUrl(c.toDataURL()));
+    }, [design, people, bgImg]);
+
+    async function genPDF() {
+      setGen(true);
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF({ orientation: page.h > page.w ? 'portrait' : 'landscape', unit: 'mm', format: [page.w, page.h] });
+      const margin = 8, gap = 4;
+      const avW = page.w - margin * 2, avH = page.h - margin * 2;
+      const cellW = (avW - gap * (cols - 1)) / cols;
+      const cellH = (avH - gap * (rows - 1)) / rows;
+      const scale = Math.min(cellW / design.width, cellH / design.height);
+      const cW = design.width * scale, cH = design.height * scale;
+
+      const cards = [];
+      for (const p of people) for (let c = 0; c < copies; c++) cards.push(p);
+
+      let col = 0, row = 0, first = true;
+      for (const person of cards) {
+        if (col === 0 && row === 0 && !first) pdf.addPage();
+        first = false;
+        const x = margin + col * (cellW + gap);
+        const y = margin + row * (cellH + gap);
+        const ox = x + (cellW - cW) / 2, oy = y + (cellH - cH) / 2;
+        const canvas = await renderCard(design, person, bgImg, 4);
+        pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', ox, oy, cW, cH);
+        if (crop) {
+          pdf.setDrawColor(160); pdf.setLineWidth(0.1);
+          [[ox, oy], [ox + cW, oy], [ox, oy + cH], [ox + cW, oy + cH]].forEach(([cx, cy]) => {
+            const ir = cx > ox, ib = cy > oy;
+            pdf.line(cx + (ir ? 2 : -2), cy, cx + (ir ? 5 : -5), cy);
+            pdf.line(cx, cy + (ib ? 2 : -2), cx, cy + (ib ? 5 : -5));
+          });
+        }
+        col++;
+        if (col >= cols) { col = 0; row++; }
+        if (row >= rows) { col = 0; row = 0; first = true; }
+      }
+      pdf.save('nametags.pdf');
+      setGen(false);
+    }
+
+    const perPage = cols * rows;
+    const total = people.length * copies;
+    const pages = Math.ceil(total / perPage);
+
+    return h('div', { className: 'sc2' },
+      h('div', { className: 'sh' }, h('h2', null, 'Export to PDF'), h('p', null, 'Configure layout and download your printable nametags.')),
+      h('div', { className: 'xl' },
+        h('div', { className: 'xo' },
+          h('div', { className: 'ss' },
+            h('h4', null, 'Page Size'),
+            ...PAGE_SIZES.map(p =>
+              h('button', {
+                key: p.label,
+                className: `pb ${page.label === p.label ? 'active' : ''}`,
+                onClick: () => setPage(p)
+              },
+                h('span', { className: 'pn' }, p.label),
+                h('span', { className: 'ps' }, `${p.w}×${p.h}mm`)
+              )
+            )
+          ),
+          h('div', { className: 'ss' },
+            h('h4', null, 'Grid Layout'),
+            h('div', { className: 'gi' },
+              h('label', null, h('span', null, 'Columns'),
+                h('input', { type: 'number', min: 1, max: 8, value: cols, onChange: e => setCols(+e.target.value) })
+              ),
+              h('label', null, h('span', null, 'Rows'),
+                h('input', { type: 'number', min: 1, max: 10, value: rows, onChange: e => setRows(+e.target.value) })
+              ),
+              h('label', null, h('span', null, 'Copies per person'),
+                h('input', { type: 'number', min: 1, max: 20, value: copies, onChange: e => setCopies(+e.target.value) })
+              )
+            )
+          ),
+          h('div', { className: 'ss' },
+            h('h4', null, 'Options'),
+            h('label', { className: 'tl' },
+              h('input', { type: 'checkbox', checked: crop, onChange: e => setCrop(e.target.checked) }),
+              h('span', null, 'Crop marks')
+            )
+          ),
+          h('div', { className: 'ss xsum' },
+            h('div', { className: 'xsr' }, h('span', null, 'People'), h('strong', null, people.length)),
+            h('div', { className: 'xsr' }, h('span', null, 'Total cards'), h('strong', null, total)),
+            h('div', { className: 'xsr' }, h('span', null, 'Per page'), h('strong', null, perPage)),
+            h('div', { className: 'xsr' }, h('span', null, 'Pages'), h('strong', null, pages))
+          ),
+          h('button', { className: 'bp gbtn', onClick: genPDF, disabled: gen || !people.length },
+            gen ? '⏳ Generating…' : '⬇ Download PDF'
+          )
+        ),
+        h('div', { className: 'xprev' },
+          h('h4', null, 'Card Preview'),
+          prevUrl
+            ? h('img', { src: prevUrl, className: 'pi', alt: 'Preview' })
+            : h('div', { className: 'pp' }, 'Loading preview…'),
+          people.length > 0 && h('p', { className: 'hint' }, `Showing: ${people[0]?.name}`)
+        )
+      ),
+      h('div', { className: 'sf' },
+        h('button', { className: 'bg2', onClick: onBack }, '← Back'),
+        h('span')
+      )
+    );
+  }
+
+  // ─── App ─────────────────────────────────────────────
+  const DEFAULT_DESIGN = {
+    backgroundImage: null,
+    width: 100,
+    height: 75,
+    fields: [],
+    randomFields: []
+  };
+
+  function App() {
+    const [step, setStep] = useState('setup');
+    const [design, setDesign] = useState(DEFAULT_DESIGN);
+    const [people, setPeople] = useState([]);
+    const [done, setDone] = useState(new Set());
+
+    function advance(from, to) {
+      setDone(prev => new Set([...prev, from]));
+      setStep(to);
+    }
+
+    return h('div', { className: 'app' },
+      h('header', { className: 'hd' },
+        h('div', { className: 'logo' },
+          h('span', { className: 'logo-i' }, '◈'),
+          h('span', null, 'Nametag', h('em', null, 'Studio'))
+        ),
+        h(StepIndicator, { current: step, onNav: setStep, done })
+      ),
+      h('main', { className: 'main' },
+        step === 'setup' && h(SetupStep, { design, onChange: setDesign, onNext: () => advance('setup', 'design') }),
+        step === 'design' && h(DesignStep, { design, onChange: setDesign, onNext: () => advance('design', 'names'), onBack: () => setStep('setup') }),
+        step === 'names' && h(NamesStep, { design, people, onChange: setPeople, onNext: () => advance('names', 'export'), onBack: () => setStep('design') }),
+        step === 'export' && h(ExportStep, { design, people, onBack: () => setStep('names') })
+      )
+    );
+  }
+
+  createRoot(document.getElementById('root')).render(h(App));
+});
+</script>
+</body>
+</html>
