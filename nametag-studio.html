@@ -9,7 +9,6 @@
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/konva@9/konva.min.js"></script>
-<script src="https://unpkg.com/react-konva@18.2.10/ReactKonva.js"></script>
 <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
@@ -162,7 +161,6 @@ input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);cursor:po
 window.addEventListener('load', () => {
   const { useState, useEffect, useRef, createElement: h, Fragment } = React;
   const { createRoot } = ReactDOM;
-  const { Stage, Layer, Image: KImage, Text: KText, Transformer, Rect } = ReactKonva;
 
   // ─── Utils ──────────────────────────────────────────
   const MM2PX = mm => (mm / 25.4) * 96;
@@ -300,27 +298,98 @@ window.addEventListener('load', () => {
     const [bgImg, setBgImg] = useState(null);
     const [selId, setSelId] = useState(null);
     const [editRf, setEditRf] = useState(null);
+    const containerRef = useRef(null);
+    const stageRef = useRef(null);
+    const layerRef = useRef(null);
     const trRef = useRef(null);
-    const nodeRefs = useRef({});
+    const nodeMapRef = useRef({});
+    const selIdRef = useRef(null);
+    const upFRef = useRef(null);
+    const bgRectRef = useRef(null);
+    const bgImgNodeRef = useRef(null);
     const cW = mm2c(design.width);
     const cH = mm2c(design.height);
 
     useEffect(() => {
-      if (!design.backgroundImage) return;
+      if (!design.backgroundImage) { setBgImg(null); return; }
       const img = new window.Image();
       img.src = design.backgroundImage;
       img.onload = () => setBgImg(img);
     }, [design.backgroundImage]);
 
     useEffect(() => {
-      if (!trRef.current) return;
-      if (selId && nodeRefs.current[selId]) {
-        trRef.current.nodes([nodeRefs.current[selId]]);
+      if (!containerRef.current) return;
+      const stage = new Konva.Stage({ container: containerRef.current, width: cW, height: cH });
+      const layer = new Konva.Layer();
+      stage.add(layer);
+      const tr = new Konva.Transformer({
+        enabledAnchors: ['middle-left', 'middle-right'],
+        rotateEnabled: false,
+        borderStroke: 'rgba(255,200,100,0.7)',
+        anchorStroke: 'rgba(255,200,100,0.7)',
+        anchorFill: 'rgba(255,200,100,0.9)',
+      });
+      layer.add(tr);
+      tr.on('transformend', () => {
+        const id = selIdRef.current;
+        if (!id) return;
+        const node = nodeMapRef.current[id];
+        if (!node) return;
+        upFRef.current(id, { width: node.width() * node.scaleX(), x: node.x(), y: node.y() });
+        node.scaleX(1);
+      });
+      stage.on('mousedown', e => { if (e.target === stage) setSelId(null); });
+      stageRef.current = stage;
+      layerRef.current = layer;
+      trRef.current = tr;
+      return () => { stage.destroy(); stageRef.current = null; };
+    }, []);
+
+    useEffect(() => {
+      const stage = stageRef.current;
+      const layer = layerRef.current;
+      const tr = trRef.current;
+      if (!stage || !layer || !tr) return;
+      selIdRef.current = selId;
+      upFRef.current = upF;
+      stage.width(cW);
+      stage.height(cH);
+      bgRectRef.current?.destroy();
+      bgImgNodeRef.current?.destroy();
+      Object.values(nodeMapRef.current).forEach(n => n.destroy());
+      nodeMapRef.current = {};
+      const bgRect = new Konva.Rect({ width: cW, height: cH, fill: '#111', listening: false });
+      layer.add(bgRect);
+      bgRectRef.current = bgRect;
+      if (bgImg) {
+        const bgImage = new Konva.Image({ image: bgImg, width: cW, height: cH, listening: false });
+        layer.add(bgImage);
+        bgImgNodeRef.current = bgImage;
       } else {
-        trRef.current.nodes([]);
+        bgImgNodeRef.current = null;
       }
-      trRef.current.getLayer()?.batchDraw();
-    }, [selId]);
+      design.fields.forEach(f => {
+        const fontStyle = [f.bold && 'bold', f.italic && 'italic'].filter(Boolean).join(' ') || 'normal';
+        const node = new Konva.Text({
+          x: f.x, y: f.y,
+          text: getDisplay(f),
+          fontSize: f.fontSize,
+          fontFamily: f.fontFamily,
+          fill: f.color,
+          fontStyle,
+          align: f.align,
+          width: f.width,
+          draggable: true,
+        });
+        node.on('click tap', () => setSelId(f.id));
+        node.on('dragend', e => upFRef.current(f.id, { x: e.target.x(), y: e.target.y() }));
+        layer.add(node);
+        nodeMapRef.current[f.id] = node;
+      });
+      tr.moveToTop();
+      tr.nodes(selId && nodeMapRef.current[selId] ? [nodeMapRef.current[selId]] : []);
+      layer.batchDraw();
+    }, [design, bgImg, selId, cW, cH]);
 
     const selField = design.fields.find(f => f.id === selId) ?? null;
 
@@ -445,49 +514,7 @@ window.addEventListener('load', () => {
         // Canvas
         h('div', { className: 'cw' },
           h('div', { className: 'cl' }, `${design.width}×${design.height}mm — Live Preview`),
-          h('div', { className: 'cc', style: { width: cW, height: cH } },
-            h(Stage, { width: cW, height: cH, onMouseDown: e => { if (e.target === e.target.getStage()) setSelId(null); } },
-              h(Layer, null,
-                h(Rect, { width: cW, height: cH, fill: '#111', listening: false }),
-                bgImg && h(KImage, { image: bgImg, width: cW, height: cH, listening: false }),
-                ...design.fields.map(f =>
-                  h(KText, {
-                    key: f.id,
-                    ref: el => { if (el) nodeRefs.current[f.id] = el; },
-                    x: f.x, y: f.y,
-                    text: getDisplay(f),
-                    fontSize: f.fontSize,
-                    fontFamily: f.fontFamily,
-                    fill: f.color,
-                    fontStyle: [f.bold && 'bold', f.italic && 'italic'].filter(Boolean).join(' ') || 'normal',
-                    align: f.align,
-                    width: f.width,
-                    draggable: true,
-                    onClick: () => setSelId(f.id),
-                    onTap: () => setSelId(f.id),
-                    onDragEnd: e => upF(f.id, { x: e.target.x(), y: e.target.y() }),
-                    stroke: selId === f.id ? 'rgba(255,200,100,0.5)' : undefined,
-                    strokeWidth: selId === f.id ? 0.8 : 0
-                  })
-                ),
-                h(Transformer, {
-                  ref: trRef,
-                  enabledAnchors: ['middle-left', 'middle-right'],
-                  rotateEnabled: false,
-                  borderStroke: 'rgba(255,200,100,0.7)',
-                  anchorStroke: 'rgba(255,200,100,0.7)',
-                  anchorFill: 'rgba(255,200,100,0.9)',
-                  onTransformEnd: () => {
-                    if (!selId) return;
-                    const node = nodeRefs.current[selId];
-                    if (!node) return;
-                    upF(selId, { width: node.width() * node.scaleX(), x: node.x(), y: node.y() });
-                    node.scaleX(1);
-                  }
-                })
-              )
-            )
-          )
+          h('div', { ref: containerRef, className: 'cc', style: { width: cW, height: cH } })
         ),
         // Right sidebar — field style
         h('div', { className: 'dsi' },
